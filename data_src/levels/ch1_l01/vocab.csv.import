@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bmixacrbwahub"
+
+[deps]
+
+files=["res://data_src/levels/ch1_l01/vocab.text.translation", "res://data_src/levels/ch1_l01/vocab.hint.translation", "res://data_src/levels/ch1_l01/vocab.tag.translation", "res://data_src/levels/ch1_l01/vocab.source.translation", "res://data_src/levels/ch1_l01/vocab.used.translation", "res://data_src/levels/ch1_l01/vocab.icon.translation", "res://data_src/levels/ch1_l01/vocab.editor.translation"]
+
+source_file="res://data_src/levels/ch1_l01/vocab.csv"
+dest_files=["res://data_src/levels/ch1_l01/vocab.text.translation", "res://data_src/levels/ch1_l01/vocab.hint.translation", "res://data_src/levels/ch1_l01/vocab.tag.translation", "res://data_src/levels/ch1_l01/vocab.source.translation", "res://data_src/levels/ch1_l01/vocab.used.translation", "res://data_src/levels/ch1_l01/vocab.icon.translation", "res://data_src/levels/ch1_l01/vocab.editor.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

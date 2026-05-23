@@ -1,0 +1,46 @@
+转换：将表放入本目录后，在项目根目录双击 run_convert.bat（或将 csv/xls/xlsx 拖到 bat 上），会生成 res://data/*.json。
+依赖：pip install -r requirements-convert.txt
+
+所有配表（含 chapters / conditions / levels …）统一下面约定；Excel 另存为 xls/xlsx 时也请保留前三行结构。
+第 1～3 行固定含义（第 4 行起为数据行）：
+第1行：英文字段名（导出 JSON 的 key 建议用这一行）
+第2行：类型提示（string / int / float；仅给人看，convert_tables 不解析本行）
+第3行：中文说明（列含义与策划约定）
+convert_tables.py 会按各表 skip_meta_rows 自动跳过说明行；conditions 表可增加 editor_note 列（策划备注），导出 JSON 时不包含该列。
+
+【chapters 表：删字段或缺列时的连锁反应（游戏侧）】
+运行 python convert_tables.py 导出 chapters.json 时，脚本会对每条记录做校验并打印 [警告]。
+- id：必填且应为正整数。缺失或无效时无法与存档、levels.chapter_id、选关 setup 对齐。
+- order：强烈建议保留。缺失时 card_stack_ui 按章节排序不稳定。
+- artist_name / chapter_name：可选；缺失则主页章节卡片标题/副标题为空字符串（chapter_card.gd 使用 .get 默认 ""）。
+- icon_id：当前 GDScript 未读取，删了不影响现有玩法；仅留作后续图标资源绑定。
+- condition_id：可选；若 JSON 中缺少该键（常见原因：CSV 表头只有 5 列、列未对齐）：level_select_page 章节解锁按钮文案退化为「解锁章节」，且不扣应援棒；chapter_list_ui.smart_scroll_to_first_locked 将该章视为 condition_id=0（is_condition_met 恒通过）。若键存在且值为 0，表示策划主动配置「章节无应援棒门槛」，与「缺列」不同。
+改表后务必重新导出 chapters.json，并确认控制台无 [警告]。
+
+【levels 全局表】
+源文件：data_src/levels.csv -> data/levels.json
+- level_id：全局唯一，建议与单关目录名一致（如 ch1_l01）。
+- data_dir：单关配表子目录名，对应 data_src/levels/{data_dir}/ 与 data/levels/{data_dir}/。
+- scene_path：Godot 场景 res:// 路径；序章 ch1_l01 指向 idol 玩法场景。
+- unlock_condition_id：int，对接 conditions.json（0 表示无额外条件）。
+- 已废弃：寻物时代的 props.csv / level_props.csv 不再转表。
+
+【单关配表目录 data_src/levels/{level_id}/】
+每关四表，转表后输出到 data/levels/{level_id}/：
+- level.csv -> level.json（通常 1 条：真相、槽位开关、required_slot、场景底图与坐标基准）
+- vocab.csv -> vocab.json（可拖入词条库）
+- hotspots.csv -> hotspots.json（parent_id 树；type: normal/collect/modal/panel）
+- slots.csv -> slots.json（slot_type: scroll / identity / mapping；卷轴用 prefix_text/suffix_text）
+
+热点坐标：按 level.art_base_width × art_base_height 设计稿像素（默认 1920×1080），运行时缩放至视口。
+
+【feed_posts 表（动态页帖子）】
+源文件：data_src/feed_posts.xlsx（或同名 csv），导出 data/feed_posts.json；已在 convert_tables.py TABLES 注册。
+- post_id：必填，全局唯一。
+- chapter_id：对齐 chapters.id；用于点头像进关卡选择页等跳转。
+- level_id：对齐 levels.level_id；发帖时间在运行时由 levels.text2 读取，不必在本表重复。
+- text：帖子正文。
+- image_path / avatar_path：res:// 资源路径；占位可用 art/feed 下占位图。
+- 动态页「推荐/关注」是否展示由系统解锁状态动态判断，不再依赖 tab 字段。
+- 艺人名由章节表（chapters.artist_name）读取，不再依赖 feed_posts.artist_name 字段。
+- 推荐/关注排序由程序规则决定（recent/open 状态 + 章节/关卡 order），不再依赖 sort_weight 字段。

@@ -1,0 +1,5 @@
+bgm_id,resource_path,loop,volume_linear
+string,string,int,float
+背景音乐配置ID（levels.csv 的 bgm_id 引用）,音频资源路径（res://…/*.ogg 或 .mp3）,是否循环播放（1=是 0=否）,音量线性系数（0.0~1.0；导出时可换算为分贝）
+bgm_menu_chapter,res://audio/bgm/menu_chapter.ogg,1,0.8
+bgm_level_default,res://audio/bgm/level_default.ogg,1,0.75

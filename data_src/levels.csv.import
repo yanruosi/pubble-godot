@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dnj0se1ugaybt"
+
+[deps]
+
+files=["res://data_src/levels.chapter.translation", "res://data_src/levels.order.translation", "res://data_src/levels.title.translation", "res://data_src/levels.scene.translation", "res://data_src/levels.data.translation", "res://data_src/levels.cheer.translation", "res://data_src/levels.bgm.translation", "res://data_src/levels.unlock.translation", "res://data_src/levels.codex.translation", "res://data_src/levels.text2.translation"]
+
+source_file="res://data_src/levels.csv"
+dest_files=["res://data_src/levels.chapter.translation", "res://data_src/levels.order.translation", "res://data_src/levels.title.translation", "res://data_src/levels.scene.translation", "res://data_src/levels.data.translation", "res://data_src/levels.cheer.translation", "res://data_src/levels.bgm.translation", "res://data_src/levels.unlock.translation", "res://data_src/levels.codex.translation", "res://data_src/levels.text2.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

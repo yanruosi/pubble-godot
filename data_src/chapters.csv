@@ -1,0 +1,7 @@
+id,order,artist_name,chapter_name,icon_id,condition_id
+int,int,string,string,int,int
+章节唯一ID（存档与跳转）,展示排序（升序）,艺人展示名,章节标题,图标资源ID（占位）,解锁条件ID（对应 conditions.id）
+1,1,Lee,和化妆师的秘密恋爱,101,1001
+2,2,Min,和队友的秘密恋爱,201,1002
+3,3,Jun,秘密恋爱的前任自杀,301,1002
+4,4,Kim,和真爱隐婚,401,1002

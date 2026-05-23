@@ -1,0 +1,360 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/level_select_page.gd" id="1_x7b2q"]
+[ext_resource type="Texture2D" uid="uid://bu360xtnrpj6p" path="res://art/icons/应援棒.png" id="2_m5n4x"]
+
+[node name="LevelSelectPage" type="Control"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_x7b2q")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.956863, 0.956863, 0.956863, 1)
+
+[node name="BackButton" type="Button" parent="."]
+z_index = 20
+custom_minimum_size = Vector2(54, 54)
+layout_mode = 1
+anchors_preset = -1
+offset_left = 20.0
+offset_top = 22.0
+offset_right = 74.0
+offset_bottom = 76.0
+flat = true
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 36
+text = "←"
+
+[node name="CheerGroup" type="HBoxContainer" parent="."]
+z_index = 20
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -88.0
+offset_top = 30.0
+offset_right = -20.0
+offset_bottom = 62.0
+grow_horizontal = 0
+theme_override_constants/separation = 2
+
+[node name="CheerIcon" type="TextureRect" parent="CheerGroup"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+texture = ExtResource("2_m5n4x")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CheerValue" type="Label" parent="CheerGroup"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.4, 0.4, 1)
+text = "0"
+
+[node name="Carousel" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LeftCard" type="PanelContainer" parent="Carousel"]
+z_index = 1
+layout_mode = 0
+offset_left = 8.0
+offset_top = 285.0
+offset_right = 169.0
+offset_bottom = 465.0
+
+[node name="CardMargin" type="MarginContainer" parent="Carousel/LeftCard"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="CardVBox" type="VBoxContainer" parent="Carousel/LeftCard/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="PreviewRect" type="ColorRect" parent="Carousel/LeftCard/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="LockOverlay" type="ColorRect" parent="Carousel/LeftCard/CardMargin/CardVBox/PreviewRect"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.05, 0.05, 0.5)
+
+[node name="LeftTitle" type="Label" parent="Carousel/LeftCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 12
+text = "上一关"
+horizontal_alignment = 1
+
+[node name="LeftSub" type="Label" parent="Carousel/LeftCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.48, 0.48, 0.48, 1)
+theme_override_font_sizes/font_size = 10
+text = "04.30"
+horizontal_alignment = 1
+
+[node name="CenterCard" type="PanelContainer" parent="Carousel"]
+z_index = 5
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -130.0
+offset_top = 230.0
+offset_right = 130.0
+offset_bottom = 520.0
+grow_horizontal = 2
+
+[node name="CardMargin" type="MarginContainer" parent="Carousel/CenterCard"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 20
+
+[node name="CardVBox" type="VBoxContainer" parent="Carousel/CenterCard/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="PreviewRect" type="ColorRect" parent="Carousel/CenterCard/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 170)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="LockOverlay" type="ColorRect" parent="Carousel/CenterCard/CardMargin/CardVBox/PreviewRect"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.05, 0.05, 0.5)
+
+[node name="TitleLabel" type="Label" parent="Carousel/CenterCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.025, 0.015, 0.13, 1)
+theme_override_font_sizes/font_size = 24
+text = "练习室"
+horizontal_alignment = 1
+
+[node name="SubLabel" type="Label" parent="Carousel/CenterCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.64, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 20
+text = "第 1 关"
+horizontal_alignment = 1
+
+[node name="RightCard" type="PanelContainer" parent="Carousel"]
+z_index = 1
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -169.0
+offset_top = 285.0
+offset_right = -8.0
+offset_bottom = 465.0
+grow_horizontal = 0
+
+[node name="CardMargin" type="MarginContainer" parent="Carousel/RightCard"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="CardVBox" type="VBoxContainer" parent="Carousel/RightCard/CardMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="PreviewRect" type="ColorRect" parent="Carousel/RightCard/CardMargin/CardVBox"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.82, 0.82, 0.82, 1)
+
+[node name="LockOverlay" type="ColorRect" parent="Carousel/RightCard/CardMargin/CardVBox/PreviewRect"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.05, 0.05, 0.5)
+
+[node name="RightTitle" type="Label" parent="Carousel/RightCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 12
+text = "下一关"
+horizontal_alignment = 1
+
+[node name="RightSub" type="Label" parent="Carousel/RightCard/CardMargin/CardVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.48, 0.48, 0.48, 1)
+theme_override_font_sizes/font_size = 10
+text = "04.30"
+horizontal_alignment = 1
+
+[node name="DotsLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -70.0
+offset_top = 548.0
+offset_right = 70.0
+offset_bottom = 580.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 22
+text = "● • •"
+horizontal_alignment = 1
+
+[node name="ActionButton" type="Button" parent="."]
+custom_minimum_size = Vector2(168, 62)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -84.0
+offset_top = 618.0
+offset_right = 84.0
+offset_bottom = 680.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 24
+text = "进入关卡"
+
+[node name="ProgressPanel" type="PanelContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(168, 62)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -84.0
+offset_top = 618.0
+offset_right = 84.0
+offset_bottom = 680.0
+grow_horizontal = 2
+
+[node name="ProgressMargin" type="MarginContainer" parent="ProgressPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="ProgressVBox" type="VBoxContainer" parent="ProgressPanel/ProgressMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ProgressText" type="Label" parent="ProgressPanel/ProgressMargin/ProgressVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 18
+text = "0/0"
+horizontal_alignment = 1
+
+[node name="ProgressTrack" type="ColorRect" parent="ProgressPanel/ProgressMargin/ProgressVBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+color = Color(0.46, 0.38, 0.72, 1)
+
+[node name="ProgressFill" type="ColorRect" parent="ProgressPanel/ProgressMargin/ProgressVBox/ProgressTrack"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.8, 0.24, 0.3, 1)
+
+[node name="ConditionBubble" type="PanelContainer" parent="."]
+visible = false
+z_index = 24
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -136.0
+offset_top = 594.0
+offset_right = 136.0
+offset_bottom = 646.0
+grow_horizontal = 2
+
+[node name="ConditionBubbleMargin" type="MarginContainer" parent="ConditionBubble"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
+
+[node name="ConditionBubbleLabel" type="Label" parent="ConditionBubble/ConditionBubbleMargin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 15
+text = "请先完成当前章节前面关卡"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="MessageLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -160.0
+offset_top = 688.0
+offset_right = 160.0
+offset_bottom = 714.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.44, 0.36, 0.76, 1)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1

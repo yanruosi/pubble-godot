@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bsx6y2krwwib7"
+
+[deps]
+
+files=["res://data_src/levels/ch1_l01/level.display.translation", "res://data_src/levels/ch1_l01/level.truth.translation", "res://data_src/levels/ch1_l01/level.vocab.translation", "res://data_src/levels/ch1_l01/level.slot.translation", "res://data_src/levels/ch1_l01/level.slot1.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.slot4.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.required.translation", "res://data_src/levels/ch1_l01/level.scene.translation", "res://data_src/levels/ch1_l01/level.art.translation", "res://data_src/levels/ch1_l01/level.art.translation", "res://data_src/levels/ch1_l01/level.coord.translation", "res://data_src/levels/ch1_l01/level.hint.translation", "res://data_src/levels/ch1_l01/level.editor.translation"]
+
+source_file="res://data_src/levels/ch1_l01/level.csv"
+dest_files=["res://data_src/levels/ch1_l01/level.display.translation", "res://data_src/levels/ch1_l01/level.truth.translation", "res://data_src/levels/ch1_l01/level.vocab.translation", "res://data_src/levels/ch1_l01/level.slot.translation", "res://data_src/levels/ch1_l01/level.slot1.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.slot4.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot2.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.slot3.translation", "res://data_src/levels/ch1_l01/level.required.translation", "res://data_src/levels/ch1_l01/level.scene.translation", "res://data_src/levels/ch1_l01/level.art.translation", "res://data_src/levels/ch1_l01/level.art.translation", "res://data_src/levels/ch1_l01/level.coord.translation", "res://data_src/levels/ch1_l01/level.hint.translation", "res://data_src/levels/ch1_l01/level.editor.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

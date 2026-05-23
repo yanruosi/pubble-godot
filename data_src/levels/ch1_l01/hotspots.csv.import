@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://waojixmv7kou"
+valid=false
+
+[deps]
+
+source_file="res://data_src/levels/ch1_l01/hotspots.csv"
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

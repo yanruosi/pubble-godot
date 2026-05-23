@@ -1,0 +1,82 @@
+[
+  {
+    "vocab_id": "vocab_aroz",
+    "text": "Aroz组合",
+    "hint_text": "",
+    "tag": "common",
+    "source_hotspot": "hs_door_sign",
+    "used_slots": "slot1",
+    "icon": "",
+    "editor_note": "门口牌子"
+  },
+  {
+    "vocab_id": "vocab_lee",
+    "text": "Lee",
+    "hint_text": "",
+    "tag": "name",
+    "source_hotspot": "in_corp_card_lee",
+    "used_slots": "slot1,slot2",
+    "icon": "",
+    "editor_note": "公司结账卡"
+  },
+  {
+    "vocab_id": "vocab_may",
+    "text": "May",
+    "hint_text": "",
+    "tag": "name",
+    "source_hotspot": "in_apple_may",
+    "used_slots": "slot1,slot2",
+    "icon": "",
+    "editor_note": "粉包苹果吊坠图May文字"
+  },
+  {
+    "vocab_id": "vocab_keycard",
+    "text": "房卡",
+    "hint_text": "",
+    "tag": "common",
+    "source_hotspot": "in_keycard_text",
+    "used_slots": "slot1",
+    "icon": "",
+    "editor_note": "粉包内房卡图文字"
+  },
+  {
+    "vocab_id": "vocab_americano",
+    "text": "美式咖啡",
+    "hint_text": "一杯美式咖啡，还温着。",
+    "tag": "drink",
+    "source_hotspot": "in_rcpt_drink1",
+    "used_slots": "slot1,slot3",
+    "icon": "",
+    "editor_note": "小票图第一杯；场景杯仅hint"
+  },
+  {
+    "vocab_id": "vocab_apple_latte",
+    "text": "苹果拿铁",
+    "hint_text": "一杯苹果拿铁，奶泡还没散。",
+    "tag": "drink",
+    "source_hotspot": "in_rcpt_drink2",
+    "used_slots": "slot3",
+    "icon": "",
+    "editor_note": "小票图第二杯；场景杯仅hint"
+  },
+  {
+    "vocab_id": "vocab_hzs",
+    "text": "化妆师",
+    "hint_text": "",
+    "tag": "common",
+    "source_hotspot": "hs_hzs",
+    "used_slots": "slot1",
+    "icon": "",
+    "editor_note": "工牌化妆师"
+  },
+  {
+    "vocab_id": "vocab_qrj",
+    "text": "情人节",
+    "hint_text": "",
+    "tag": "common",
+    "source_hotspot": "in_qrj",
+    "used_slots": "slot1",
+    "icon": "",
+    "editor_note": "帖子工作"
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "effect_id": "fx_found_ping",
+    "resource_path": "res://fx/found_ping.tscn",
+    "editor_note": "找到目标时的轻量提示（占位路径）"
+  },
+  {
+    "effect_id": "heart_point",
+    "resource_path": "res://fx/found_ping.tscn",
+    "editor_note": "爱心点击"
+  }
+]

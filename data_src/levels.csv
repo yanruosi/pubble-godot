@@ -1,0 +1,13 @@
+level_id,chapter_id,order,title,scene_path,data_dir,cheer_reward,bgm_id,unlock_condition_id,codex_unlock_id,text2
+string,int,int,string,string,string,int,string,int,int,string
+关卡全局唯一ID,归属章节ID,章内排序,选关/列表标题,Godot场景路径,单关配置目录名（对应 data_src/levels/该名/）,通关应援棒,背景音乐ID,解锁条件ID（conditions.json）,图鉴ID（0无）,动态/选关副文案
+ch1_l01,1,1,化妆室疑云,res://scenes/idol/ch1_l01.tscn,ch1_l01,20,bgm_level_default,1001,0,04.30.2022
+ch1_l02,1,2,后台走廊,res://scenes/idol/idol_level.tscn,ch1_l02,10,bgm_level_default,3001,0,04.30.2023
+ch1_l03,1,3,后台走廊2,res://scenes/idol/idol_level.tscn,ch1_l03,10,bgm_level_default,3001,0,04.30.2024
+ch1_l04,1,4,后台走廊3,res://scenes/idol/idol_level.tscn,ch1_l04,10,bgm_level_default,3001,0,04.30.2025
+ch1_l05,1,5,后台走廊4,res://scenes/idol/idol_level.tscn,ch1_l05,10,bgm_level_default,3001,0,04.30.2026
+ch2_201,2,1,第二章关卡1,res://scenes/idol/idol_level.tscn,ch2_201,10,bgm_level_default,1001,0,04.30.2022
+ch2_202,2,2,第二章关卡2,res://scenes/idol/idol_level.tscn,ch2_202,10,bgm_level_default,3001,0,04.30.2023
+ch2_203,2,3,第二章关卡3,res://scenes/idol/idol_level.tscn,ch2_203,10,bgm_level_default,3001,0,04.30.2024
+ch2_204,2,4,第二章关卡4,res://scenes/idol/idol_level.tscn,ch2_204,10,bgm_level_default,3001,0,04.30.2025
+ch2_205,2,5,第二章关卡5,res://scenes/idol/idol_level.tscn,ch2_205,10,bgm_level_default,3001,0,04.30.2026

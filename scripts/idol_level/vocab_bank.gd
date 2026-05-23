@@ -1,0 +1,71 @@
+extends Node
+class_name VocabBank
+
+signal vocab_collected(vocab: Dictionary)
+signal changed(collected_count: int, total_count: int)
+
+var _vocab_by_id: Dictionary = {}
+var _collected_ids: Dictionary = {}
+var _total_count: int = 0
+
+func setup(vocab_rows: Array, vocab_total: int) -> void:
+	_vocab_by_id.clear()
+	_collected_ids.clear()
+	_total_count = max(vocab_total, vocab_rows.size())
+	for item in vocab_rows:
+		if not (item is Dictionary):
+			continue
+		var row: Dictionary = (item as Dictionary).duplicate(true)
+		var vocab_id: String = str(row.get("vocab_id", ""))
+		if vocab_id.is_empty():
+			continue
+		_vocab_by_id[vocab_id] = row
+	changed.emit(collected_count(), _total_count)
+
+func collect(vocab_id: String) -> bool:
+	if vocab_id.is_empty():
+		return false
+	if not _vocab_by_id.has(vocab_id):
+		push_warning("【词条收集警告】vocab_id=%s 不存在，无法收录" % vocab_id)
+		return false
+	if bool(_collected_ids.get(vocab_id, false)):
+		return false
+	_collected_ids[vocab_id] = true
+	var vocab: Dictionary = _vocab_by_id[vocab_id].duplicate(true)
+	vocab_collected.emit(vocab)
+	changed.emit(collected_count(), _total_count)
+	return true
+
+func has_vocab(vocab_id: String) -> bool:
+	return bool(_collected_ids.get(vocab_id, false))
+
+func collected_count() -> int:
+	return _collected_ids.size()
+
+func total_count() -> int:
+	return _total_count
+
+func get_vocab(vocab_id: String) -> Dictionary:
+	return _vocab_by_id.get(vocab_id, {}).duplicate(true)
+
+func get_vocab_text(vocab_id: String) -> String:
+	var row: Dictionary = get_vocab(vocab_id)
+	return str(row.get("text", vocab_id))
+
+func get_collected_vocab(filter_tag: String = "") -> Array:
+	var result: Array = []
+	for vocab_id in _collected_ids.keys():
+		var row: Dictionary = _vocab_by_id.get(vocab_id, {})
+		if row.is_empty():
+			continue
+		if not filter_tag.is_empty() and str(row.get("tag", "")) != filter_tag:
+			continue
+		result.append(row.duplicate(true))
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return str(a.get("text", "")) < str(b.get("text", ""))
+	)
+	return result
+
+func is_name_vocab(vocab_id: String) -> bool:
+	var row: Dictionary = get_vocab(vocab_id)
+	return str(row.get("tag", "")) == "name"

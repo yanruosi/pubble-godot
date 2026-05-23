@@ -1,0 +1,110 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/idol_level/idol_level_root.gd" id="1_root"]
+[ext_resource type="Script" path="res://scripts/idol_level/hotspot_layer.gd" id="2_hotspots"]
+[ext_resource type="Script" path="res://scripts/idol_level/idol_popup_panel.gd" id="3_popup"]
+[ext_resource type="Script" path="res://scripts/idol_level/idol_bottom_bar.gd" id="4_bottom"]
+[ext_resource type="Script" path="res://scripts/idol_level/scroll_slot_panel.gd" id="5_scroll"]
+[ext_resource type="Script" path="res://scripts/idol_level/identity_slot_panel.gd" id="6_identity"]
+[ext_resource type="Script" path="res://scripts/idol_level/mapping_slot_panel.gd" id="7_mapping"]
+[ext_resource type="Script" path="res://scripts/idol_level/scene_pan_controller.gd" id="8_pan"]
+
+[node name="IdolLevelRoot" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_root")
+
+[node name="BgSolid" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.035, 0.04, 0.045, 1)
+
+[node name="SceneViewport" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+clip_contents = true
+script = ExtResource("8_pan")
+
+[node name="SceneWorld" type="Control" parent="SceneViewport"]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="BgImage" type="TextureRect" parent="SceneViewport/SceneWorld"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
+
+[node name="HotspotLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("2_hotspots")
+
+[node name="PopupLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_popup")
+
+[node name="BottomBar" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_bottom")
+
+[node name="ScrollPanel" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_scroll")
+
+[node name="IdentityPanel" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_identity")
+
+[node name="MappingPanel" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7_mapping")

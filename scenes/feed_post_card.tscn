@@ -1,0 +1,171 @@
+[gd_scene load_steps=2 format=3 uid="uid://feedpostcard01"]
+
+[ext_resource type="Script" path="res://scenes/feed_post_card.gd" id="1_script"]
+
+[node name="FeedPostCard" type="PanelContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 0
+script = ExtResource("1_script")
+
+[node name="CardMargin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 16
+
+[node name="MainVBox" type="VBoxContainer" parent="CardMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="HeaderRow" type="HBoxContainer" parent="CardMargin/MainVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AvatarBtn" type="TextureButton" parent="CardMargin/MainVBox/HeaderRow"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="HeaderTexts" type="VBoxContainer" parent="CardMargin/MainVBox/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="NameLabel" type="Label" parent="CardMargin/MainVBox/HeaderRow/HeaderTexts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 16
+text = "LEE"
+
+[node name="TimeLabel" type="Label" parent="CardMargin/MainVBox/HeaderRow/HeaderTexts"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.43, 0.52, 1)
+theme_override_font_sizes/font_size = 13
+text = "04.30.22"
+
+[node name="BodyLabel" type="Label" parent="CardMargin/MainVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.16, 0.14, 0.2, 1)
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+text = "演出顺利结束"
+
+[node name="SingleImage" type="TextureRect" parent="CardMargin/MainVBox"]
+custom_minimum_size = Vector2(0, 186)
+layout_mode = 2
+mouse_filter = 0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="SingleImagePlaceholder" type="ColorRect" parent="CardMargin/MainVBox/SingleImage"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.88, 0.88, 0.92, 1)
+
+[node name="SplitRow" type="HBoxContainer" parent="CardMargin/MainVBox"]
+visible = false
+layout_mode = 2
+mouse_filter = 0
+theme_override_constants/separation = 8
+
+[node name="SplitLeft" type="ColorRect" parent="CardMargin/MainVBox/SplitRow"]
+custom_minimum_size = Vector2(0, 156)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+color = Color(0.86, 0.86, 0.9, 1)
+
+[node name="SplitRight" type="ColorRect" parent="CardMargin/MainVBox/SplitRow"]
+custom_minimum_size = Vector2(0, 156)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+color = Color(0.82, 0.82, 0.88, 1)
+
+[node name="RecommendFooter" type="MarginContainer" parent="CardMargin/MainVBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_top = 2
+
+[node name="BtnViewMore" type="Button" parent="CardMargin/MainVBox/RecommendFooter"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "查看更多"
+flat = true
+
+[node name="FollowBar" type="PanelContainer" parent="CardMargin/MainVBox"]
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
+
+[node name="FollowBarMargin" type="MarginContainer" parent="CardMargin/MainVBox/FollowBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="FollowActions" type="HBoxContainer" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="LikeCol" type="HBoxContainer" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LikeBtn" type="TextureButton" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/LikeCol"]
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="LikeCount" type="Label" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/LikeCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.92, 0.94, 1)
+theme_override_font_sizes/font_size = 13
+text = "1K"
+
+[node name="CommentCol" type="HBoxContainer" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CommentIcon" type="ColorRect" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol"]
+custom_minimum_size = Vector2(18, 16)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.92, 0.92, 0.94, 1)
+
+[node name="CommentCount" type="Label" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.92, 0.94, 1)
+theme_override_font_sizes/font_size = 13
+text = "181"
+
+[node name="FollowBarSpacer" type="Control" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PinCol" type="HBoxContainer" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PinBtn" type="TextureButton" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/PinCol"]
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="PinText" type="Label" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/PinCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.92, 0.94, 1)
+theme_override_font_sizes/font_size = 13
+text = "置顶"

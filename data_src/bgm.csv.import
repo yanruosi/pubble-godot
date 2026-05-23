@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cs681lxmhxbts"
+
+[deps]
+
+files=["res://data_src/bgm.resource.translation", "res://data_src/bgm.loop.translation", "res://data_src/bgm.volume.translation"]
+
+source_file="res://data_src/bgm.csv"
+dest_files=["res://data_src/bgm.resource.translation", "res://data_src/bgm.loop.translation", "res://data_src/bgm.volume.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dxevbtvka7dgx"
+
+[deps]
+
+files=["res://data_src/conditions.type.translation", "res://data_src/conditions.param.translation", "res://data_src/conditions.txt.translation", "res://data_src/conditions.editor.translation"]
+
+source_file="res://data_src/conditions.csv"
+dest_files=["res://data_src/conditions.type.translation", "res://data_src/conditions.param.translation", "res://data_src/conditions.txt.translation", "res://data_src/conditions.editor.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

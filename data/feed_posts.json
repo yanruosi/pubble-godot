@@ -1,0 +1,82 @@
+[
+  {
+    "post_id": "ch1_1_post",
+    "chapter_id": 1,
+    "level_id": "ch1_l01",
+    "text": "练习室日常一条。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch1_2_post",
+    "chapter_id": 1,
+    "level_id": "ch1_l02",
+    "text": "后台走廊线索。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch1_3_post",
+    "chapter_id": 1,
+    "level_id": "ch1_l03",
+    "text": "后台走廊2。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch1_4_post",
+    "chapter_id": 1,
+    "level_id": "ch1_l04",
+    "text": "后台走廊3。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch1_5_post",
+    "chapter_id": 1,
+    "level_id": "ch1_l05",
+    "text": "后台走廊4（章末关）。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch2_1_post",
+    "chapter_id": 2,
+    "level_id": "ch2_201",
+    "text": "练习室日常一条。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch2_2_post",
+    "chapter_id": 2,
+    "level_id": "ch2_202",
+    "text": "后台走廊线索。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch2_3_post",
+    "chapter_id": 2,
+    "level_id": "ch2_203",
+    "text": "后台走廊2。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch2_4_post",
+    "chapter_id": 2,
+    "level_id": "ch2_204",
+    "text": "后台走廊3。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  },
+  {
+    "post_id": "ch2_5_post",
+    "chapter_id": 2,
+    "level_id": "ch2_205",
+    "text": "后台走廊4（章末关）。",
+    "image_path": "res://art/feed/placeholder_post.png",
+    "avatar_path": "res://art/feed/placeholder_avatar.png"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "bgm_id": "bgm_menu_chapter",
+    "resource_path": "res://audio/bgm/menu_chapter.ogg",
+    "loop": 1,
+    "volume_linear": 0.8
+  },
+  {
+    "bgm_id": "bgm_level_default",
+    "resource_path": "res://audio/bgm/level_default.ogg",
+    "loop": 1,
+    "volume_linear": 0.75
+  }
+]
