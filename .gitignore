@@ -1,6 +1,38 @@
-# Godot 4+ specific ignores
+# Godot 4+
 .godot/
 /android/
+*.translation
 
-# 本机 Godot 路径（见 godot.local.bat.example）
+# 导出 / 构建产物
+export/
+export_presets.cfg
+*.apk
+*.aab
+*.exe
+*.pck
+*.zip
+
+# 本机 Godot 路径（模板 godot.local.bat.example 可提交）
 godot.local.bat
+
+# 编辑器 / IDE
+.cursor/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 调试日志（运行时生成）
+debug-*.log
+
+# Windows / macOS 杂项
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.lnk
+
+# Python（convert_tables 等）
+__pycache__/
+*.py[cod]
+.venv/
+venv/
