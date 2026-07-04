@@ -55,16 +55,6 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 0
 
-[node name="HotspotLayer" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 1
-script = ExtResource("2_hotspots")
-
 [node name="PopupLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -109,3 +99,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("7_mapping")
+
+[node name="HotspotLayer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+z_index = 100
+script = ExtResource("2_hotspots")

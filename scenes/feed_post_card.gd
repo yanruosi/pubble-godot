@@ -8,7 +8,19 @@ signal pin_toggled(is_pinned: bool)
 
 const LAYOUT_RECOMMEND := "recommend"
 const LAYOUT_FOLLOW := "follow"
-const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-fe0741.log"
+const LAYOUT_ARTIST := "artist"
+const LAYOUT_FANS := "fans"
+
+# 艺人帖配图固定尺寸，左对齐
+const SINGLE_IMAGE_SIZE := Vector2(350, 350)
+
+const PATH_ARTIST_POSTBG := "res://art/mainui/postui/artistpostbg.png"
+const PATH_LOVE := "res://art/mainui/postui/love.png"
+const PATH_COMMENT := "res://art/mainui/postui/comment.png"
+const PATH_SHOUCANG := "res://art/mainui/postui/shoucang.png"
+
+const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-17a2ce.log"
+const DEBUG_SESSION_ID := "17a2ce"
 
 @onready var _avatar_btn: TextureButton = $CardMargin/MainVBox/HeaderRow/AvatarBtn
 @onready var _name_label: Label = $CardMargin/MainVBox/HeaderRow/HeaderTexts/NameLabel
@@ -21,6 +33,7 @@ const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-fe0741.log"
 @onready var _btn_view_more: Button = $CardMargin/MainVBox/RecommendFooter/BtnViewMore
 @onready var _follow_bar: PanelContainer = $CardMargin/MainVBox/FollowBar
 @onready var _like_btn: TextureButton = $CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/LikeCol/LikeBtn
+@onready var _comment_icon: TextureRect = $CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol/CommentIcon
 @onready var _pin_btn: TextureButton = $CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/PinCol/PinBtn
 @onready var _pin_text: Label = $CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/PinCol/PinText
 @onready var _split_left: ColorRect = $CardMargin/MainVBox/SplitRow/SplitLeft
@@ -32,13 +45,17 @@ const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-fe0741.log"
 @export var pin_icon_active: Texture2D
 
 var _is_follow_layout: bool = false
+var _is_artist_layout: bool = false
+var _is_fans_layout: bool = false
 var _is_pinned: bool = false
 var _card_panel_style: StyleBoxFlat
+var _artist_postbg_tex: Texture2D
+
 
 #region agent log
-func _dbg(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "run1") -> void:
+func _dbg17(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "post-fix") -> void:
 	var payload := {
-		"sessionId": "fe0741",
+		"sessionId": DEBUG_SESSION_ID,
 		"runId": run_id,
 		"hypothesisId": hypothesis_id,
 		"location": location,
@@ -66,6 +83,8 @@ func _ready() -> void:
 	_split_left.gui_input.connect(_on_media_gui_input)
 	_split_right.gui_input.connect(_on_media_gui_input)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	# 默认白底卡片（推荐/粉丝布局用）
 	_card_panel_style = StyleBoxFlat.new()
 	_card_panel_style.bg_color = Color(1, 1, 1, 1)
 	_card_panel_style.border_color = Color(0.9, 0.88, 0.94, 1)
@@ -75,6 +94,10 @@ func _ready() -> void:
 	_card_panel_style.corner_radius_bottom_right = 14
 	_card_panel_style.corner_radius_bottom_left = 14
 	add_theme_stylebox_override("panel", _card_panel_style)
+
+	if ResourceLoader.exists(PATH_ARTIST_POSTBG):
+		_artist_postbg_tex = load(PATH_ARTIST_POSTBG) as Texture2D
+
 	var vm_style := StyleBoxFlat.new()
 	vm_style.bg_color = Color(0.91, 0.91, 0.93, 1)
 	vm_style.corner_radius_top_left = 10
@@ -85,56 +108,183 @@ func _ready() -> void:
 	var vm_hover := vm_style.duplicate() as StyleBoxFlat
 	vm_hover.bg_color = Color(0.87, 0.87, 0.91, 1)
 	_btn_view_more.add_theme_stylebox_override("hover", vm_hover)
-	var fb := StyleBoxFlat.new()
-	fb.bg_color = Color(0.08, 0.08, 0.1, 1)
-	fb.corner_radius_top_left = 8
-	fb.corner_radius_top_right = 8
-	fb.corner_radius_bottom_right = 8
-	fb.corner_radius_bottom_left = 8
-	_follow_bar.add_theme_stylebox_override("panel", fb)
+
 	_apply_follow_action_visual()
 
 
 func setup(enriched: Dictionary) -> void:
 	var layout: String = str(enriched.get("layout", LAYOUT_RECOMMEND)).to_lower()
 	_is_follow_layout = layout == LAYOUT_FOLLOW
+	_is_artist_layout = layout == LAYOUT_ARTIST
+	_is_fans_layout = layout == LAYOUT_FANS
 	_is_pinned = bool(enriched.get("is_pinned", false))
 
 	var artist: String = str(enriched.get("artist_name", ""))
 	var body: String = str(enriched.get("text", ""))
+	var time_display: String = str(enriched.get("time_display", ""))
 	var img_path: String = str(enriched.get("image_path", ""))
 	var av_path: String = str(enriched.get("avatar_path", ""))
 
-	_name_label.text = artist if not artist.is_empty() else "艺人"
-	_time_label.visible = false
+	_name_label.text = artist if not artist.is_empty() else ("粉丝" if _is_fans_layout else "艺人")
+	_time_label.text = time_display
+	_time_label.visible = not time_display.is_empty()
 	_body_label.text = body
 
-	_single_image.visible = not _is_follow_layout
+	# 艺人/粉丝动态：底部操作栏 + artistpostbg；旧 follow 布局仍走双图
+	var show_action_bar := _is_follow_layout or _uses_feed_theme()
 	_split_row.visible = _is_follow_layout
-	_recommend_footer.visible = not _is_follow_layout
-	_follow_bar.visible = _is_follow_layout
-	_single_image.mouse_filter = Control.MOUSE_FILTER_IGNORE if not _is_follow_layout else Control.MOUSE_FILTER_STOP
+	_recommend_footer.visible = not show_action_bar
+	_follow_bar.visible = show_action_bar
 	_split_row.mouse_filter = Control.MOUSE_FILTER_STOP if _is_follow_layout else Control.MOUSE_FILTER_IGNORE
 
-	if not _is_follow_layout:
-		if img_path != "" and ResourceLoader.exists(img_path):
+	_apply_single_image(img_path)
+	_apply_avatar(av_path)
+
+	if _single_image.visible:
+		_apply_single_image_left_align()
+	_apply_layout_theme()
+	_apply_follow_action_visual()
+	call_deferred("debug_log_card_layout")
+
+
+# 帖子配图左对齐：控件宽度固定 350，避免在宽卡片内居中
+func _apply_single_image_left_align() -> void:
+	if _single_image == null:
+		return
+	_single_image.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_single_image.custom_minimum_size = SINGLE_IMAGE_SIZE
+	_single_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_single_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+
+
+# 艺人帖与粉丝帖共用 artistpostbg；操作栏去掉黑底
+func _uses_feed_theme() -> bool:
+	return _is_artist_layout or _is_fans_layout
+
+
+# 配图：艺人/粉丝帖表里没 path 则整区隐藏；旧推荐流仍用紫色占位
+func _apply_single_image(img_path: String) -> void:
+	if _is_follow_layout:
+		_single_image.visible = false
+		_single_image.texture = null
+		_single_image_placeholder.visible = false
+		_single_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+
+	var has_image := img_path != "" and ResourceLoader.exists(img_path)
+	if _uses_feed_theme():
+		if has_image:
+			_single_image.visible = true
 			_single_image.texture = load(img_path) as Texture2D
 			_single_image.modulate = Color.WHITE
 			_single_image_placeholder.visible = false
+			_single_image.mouse_filter = Control.MOUSE_FILTER_STOP
 		else:
+			# 没配 image_path：不展示配图区，不要 SingleImagePlaceholder 占位块
+			_single_image.visible = false
 			_single_image.texture = null
-			_single_image_placeholder.visible = true
+			_single_image_placeholder.visible = false
+			_single_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+
+	_single_image.visible = true
+	if has_image:
+		_single_image.texture = load(img_path) as Texture2D
+		_single_image.modulate = Color.WHITE
+		_single_image_placeholder.visible = false
+		_single_image.mouse_filter = Control.MOUSE_FILTER_STOP
 	else:
 		_single_image.texture = null
-		_single_image_placeholder.visible = false
+		_single_image_placeholder.visible = true
+		_single_image.mouse_filter = Control.MOUSE_FILTER_STOP
 
+
+# 头像：粉丝帖表里没配 path 则整颗头像隐藏，不要紫色占位
+func _apply_avatar(av_path: String) -> void:
+	if _is_fans_layout:
+		if av_path != "" and ResourceLoader.exists(av_path):
+			_avatar_btn.visible = true
+			_avatar_btn.texture_normal = load(av_path) as Texture2D
+			_avatar_btn.modulate = Color.WHITE
+		else:
+			_avatar_btn.visible = false
+			_avatar_btn.texture_normal = null
+		return
+	_avatar_btn.visible = true
 	if av_path != "" and ResourceLoader.exists(av_path):
 		_avatar_btn.texture_normal = load(av_path) as Texture2D
 		_avatar_btn.modulate = Color.WHITE
 	else:
 		_avatar_btn.texture_normal = null
 		_avatar_btn.modulate = Color(0.86, 0.84, 0.93, 1)
-	_apply_follow_action_visual()
+
+
+func _apply_layout_theme() -> void:
+	if _uses_feed_theme() and _artist_postbg_tex != null:
+		var sbt := StyleBoxTexture.new()
+		sbt.texture = _artist_postbg_tex
+		sbt.set_content_margin_all(14)
+		add_theme_stylebox_override("panel", sbt)
+	elif _card_panel_style != null:
+		add_theme_stylebox_override("panel", _card_panel_style)
+
+	if _follow_bar == null:
+		return
+	if _uses_feed_theme():
+		var transparent := StyleBoxEmpty.new()
+		_follow_bar.add_theme_stylebox_override("panel", transparent)
+	else:
+		var fb := StyleBoxFlat.new()
+		fb.bg_color = Color(0.08, 0.08, 0.1, 1)
+		fb.corner_radius_top_left = 8
+		fb.corner_radius_top_right = 8
+		fb.corner_radius_bottom_right = 8
+		fb.corner_radius_bottom_left = 8
+		_follow_bar.add_theme_stylebox_override("panel", fb)
+
+
+#region agent log
+func debug_log_card_layout() -> void:
+	if not is_inside_tree():
+		return
+	var card_rect := get_global_rect()
+	var card_center_x := card_rect.position.x + card_rect.size.x * 0.5
+	var avatar_center_x := _avatar_btn.global_position.x + _avatar_btn.size.x * 0.5 if _avatar_btn != null else -1.0
+	var image_center_x := -1.0
+	if _single_image != null and _single_image.visible:
+		image_center_x = _single_image.global_position.x + _single_image.size.x * 0.5
+	_dbg17(
+		"A",
+		"feed_post_card.gd:debug_log_card_layout",
+		"卡片内容水平对齐检测",
+		{
+			"card_global_rect": str(card_rect),
+			"card_center_x": card_center_x,
+			"avatar_center_x": avatar_center_x,
+			"avatar_offset_from_card_center": avatar_center_x - card_center_x if avatar_center_x >= 0.0 else "n/a",
+			"image_center_x": image_center_x,
+			"image_offset_from_card_center": image_center_x - card_center_x if image_center_x >= 0.0 else "n/a",
+			"single_image_size": str(_single_image.size) if _single_image != null else "n/a",
+			"single_image_visible": _single_image.visible if _single_image != null else false,
+			"placeholder_visible": _single_image_placeholder.visible if _single_image_placeholder != null else false,
+			"is_artist_layout": _is_artist_layout,
+			"is_fans_layout": _is_fans_layout,
+			"avatar_visible": _avatar_btn.visible if _avatar_btn != null else false
+		}
+	)
+	if _like_btn != null:
+		_dbg17(
+			"C",
+			"feed_post_card.gd:debug_log_card_layout",
+			"底部图标热区",
+			{
+				"like_btn_size": str(_like_btn.size),
+				"like_btn_min": str(_like_btn.custom_minimum_size),
+				"comment_icon_size": str(_comment_icon.size) if _comment_icon != null else "n/a",
+				"pin_btn_size": str(_pin_btn.size) if _pin_btn != null else "n/a"
+			}
+		)
+#endregion
 
 
 func _on_media_gui_input(event: InputEvent) -> void:
@@ -149,25 +299,13 @@ func _on_media_gui_input(event: InputEvent) -> void:
 
 
 func _on_like_pressed() -> void:
-	if _is_follow_layout:
-		#region agent log
-		_dbg(
-			"H1",
-			"feed_post_card.gd:_on_like_pressed",
-			"like button pressed positions",
-			{
-				"card_global": global_position,
-				"like_btn_global": _like_btn.global_position if _like_btn != null else Vector2.ZERO,
-				"follow_bar_global": _follow_bar.global_position if _follow_bar != null else Vector2.ZERO
-			}
-		)
-		#endregion
+	if _is_follow_layout or _uses_feed_theme():
 		var anchor := _like_btn.global_position + Vector2(_like_btn.size.x * 0.5, 0.0)
 		like_pressed.emit(anchor)
 
 
 func _on_pin_pressed() -> void:
-	if not _is_follow_layout:
+	if not _is_follow_layout and not _uses_feed_theme():
 		return
 	_is_pinned = not _is_pinned
 	_apply_follow_action_visual()
@@ -180,8 +318,26 @@ func set_pinned(value: bool) -> void:
 
 
 func _apply_follow_action_visual() -> void:
-	if _like_btn == null or _pin_btn == null or _card_panel_style == null:
+	if _like_btn == null or _pin_btn == null:
 		return
+
+	var love_tex := _load_ui_tex(PATH_LOVE)
+	var comment_tex := _load_ui_tex(PATH_COMMENT)
+	var pin_tex := _load_ui_tex(PATH_SHOUCANG)
+
+	# 艺人帖与粉丝帖共用 love / comment / shoucang 资源
+	if _uses_feed_theme():
+		_like_btn.texture_normal = love_tex if love_tex != null else _resolve_icon(like_icon_default, Color(0.92, 0.92, 0.94, 1))
+		_like_btn.texture_pressed = _like_btn.texture_normal
+		_like_btn.texture_hover = _like_btn.texture_normal
+		if _comment_icon != null and comment_tex != null:
+			_comment_icon.texture = comment_tex
+		_pin_btn.texture_normal = pin_tex if pin_tex != null else _resolve_icon(pin_icon_default, Color(0.92, 0.92, 0.94, 1))
+		_pin_btn.texture_pressed = _pin_btn.texture_normal
+		_pin_btn.texture_hover = _pin_btn.texture_normal
+		_pin_text.modulate = Color(0.45, 0.43, 0.52, 1) if not _is_pinned else Color(1.0, 0.82, 0.28, 1)
+		return
+
 	_like_btn.texture_normal = _resolve_icon(like_icon_default, Color(0.92, 0.92, 0.94, 1))
 	_like_btn.texture_pressed = _resolve_icon(like_icon_active, Color(1.0, 0.44, 0.58, 1))
 	_like_btn.texture_hover = _like_btn.texture_pressed
@@ -194,9 +350,10 @@ func _apply_follow_action_visual() -> void:
 		_pin_btn.texture_pressed = active_icon
 		_pin_btn.texture_disabled = active_icon
 		_pin_text.modulate = Color(1.0, 0.82, 0.28, 1)
-		_card_panel_style.bg_color = Color(1.0, 0.989, 0.94, 1)
-		_card_panel_style.border_color = Color(1.0, 0.82, 0.28, 1)
-		_card_panel_style.set_border_width_all(2)
+		if _card_panel_style != null and not _uses_feed_theme():
+			_card_panel_style.bg_color = Color(1.0, 0.989, 0.94, 1)
+			_card_panel_style.border_color = Color(1.0, 0.82, 0.28, 1)
+			_card_panel_style.set_border_width_all(2)
 		var tw_in := create_tween()
 		tw_in.tween_property(self, "scale", Vector2(1.01, 1.01), 0.08)
 		tw_in.tween_property(self, "scale", Vector2.ONE, 0.10)
@@ -208,9 +365,18 @@ func _apply_follow_action_visual() -> void:
 		_pin_btn.texture_pressed = active_icon_unpinned
 		_pin_btn.texture_disabled = normal_icon
 		_pin_text.modulate = Color(0.92, 0.92, 0.94, 1)
-		_card_panel_style.bg_color = Color(1, 1, 1, 1)
-		_card_panel_style.border_color = Color(0.9, 0.88, 0.94, 1)
-		_card_panel_style.set_border_width_all(1)
+		if _card_panel_style != null and not _uses_feed_theme():
+			_card_panel_style.bg_color = Color(1, 1, 1, 1)
+			_card_panel_style.border_color = Color(0.9, 0.88, 0.94, 1)
+			_card_panel_style.set_border_width_all(1)
+
+
+func _load_ui_tex(path: String) -> Texture2D:
+	if ResourceLoader.exists(path):
+		var loaded := load(path)
+		if loaded is Texture2D:
+			return loaded as Texture2D
+	return null
 
 
 func _resolve_icon(tex: Texture2D, fallback_color: Color) -> Texture2D:

@@ -1,12 +1,13 @@
 extends RefCounted
 class_name LevelPackValidator
 
-const VALID_HOTSPOT_TYPES := ["normal", "collect", "modal", "panel"]
+const VALID_HOTSPOT_TYPES := ["normal", "collect", "modal", "panel", "close"]
 const VALID_SLOT_TYPES := ["scroll", "identity", "mapping"]
 const CODE_EMITTED_EVENTS := [
 	"poster_viewed",
 	"badge_viewed",
 	"lee_portrait_unlocked",
+	"leo_portrait_unlocked",
 	"may_portrait_unlocked",
 	"americano_icon_unlocked",
 	"apple_latte_icon_unlocked"
@@ -74,7 +75,7 @@ func validate(pack: Dictionary) -> Array:
 
 		var hotspot_type: String = str(row.get("hotspot_type", ""))
 		if not VALID_HOTSPOT_TYPES.has(hotspot_type):
-			_warn(level_id, "hotspots.json: hotspot_id=%s 的 hotspot_type=%s 不在允许值 normal/collect/modal/panel 内" % [hotspot_id, hotspot_type], messages)
+			_warn(level_id, "hotspots.json: hotspot_id=%s 的 hotspot_type=%s 不在允许值 normal/collect/modal/panel/close 内" % [hotspot_id, hotspot_type], messages)
 
 		var collect_vocab: String = str(row.get("collect_vocab", ""))
 		if not collect_vocab.is_empty() and not vocab_ids.has(collect_vocab):
@@ -92,6 +93,25 @@ func validate(pack: Dictionary) -> Array:
 		var hide_question_only: int = int(row.get("hide_question_only", 0))
 		if hide_question_only != 0 and hide_question_only != 1:
 			_warn(level_id, "hotspots.json: hotspot_id=%s 的 hide_question_only 仅允许 0/1" % hotspot_id, messages)
+		var dismiss_on_outside_click: int = int(row.get("dismiss_on_outside_click", 0))
+		if dismiss_on_outside_click != 0 and dismiss_on_outside_click != 1:
+			_warn(level_id, "hotspots.json: hotspot_id=%s 的 dismiss_on_outside_click 仅允许 0/1" % hotspot_id, messages)
+		if dismiss_on_outside_click == 1 and open_modal.is_empty():
+			_warn(level_id, "hotspots.json: hotspot_id=%s 配置了 dismiss_on_outside_click=1，但没有 open_modal 可关闭" % hotspot_id, messages)
+		var visual_mode: String = str(row.get("visual_mode", "")).strip_edges()
+		if not visual_mode.is_empty() and visual_mode != "hidden":
+			_warn(level_id, "hotspots.json: hotspot_id=%s 的 visual_mode=%s 仅允许空或 hidden" % [hotspot_id, visual_mode], messages)
+
+		var coord_bw: float = float(row.get("coord_base_width", 0))
+		var coord_bh: float = float(row.get("coord_base_height", 0))
+		var has_coord_base: bool = coord_bw > 0.0 and coord_bh > 0.0
+		var asset_path: String = str(row.get("asset", ""))
+		if not open_modal.is_empty() and not asset_path.is_empty() and not has_coord_base:
+			_warn(level_id, "hotspots.json: hotspot_id=%s 打开弹层且配置了 asset，必须填写 coord_base_width/height（PSD 1× 显示尺寸）" % hotspot_id, messages)
+		if has_coord_base and open_modal.is_empty():
+			var parent_is_popup_layer: bool = parent_id.begins_with("modal_") or parent_id.begins_with("panel_")
+			if parent_is_popup_layer:
+				_warn(level_id, "hotspots.json: hotspot_id=%s 为弹窗内子热点，不应填写 coord_base（继承打开行的画布尺寸）" % hotspot_id, messages)
 
 		var w: float = float(row.get("width", 0.0))
 		var h: float = float(row.get("height", 0.0))

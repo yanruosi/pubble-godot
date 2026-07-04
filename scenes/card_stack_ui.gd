@@ -3,16 +3,16 @@ extends Control
 signal chapter_selected(chapter_id: int)
 
 # 可调参数（按 540x960 初始）
-const BASE_CARD_SIZE := Vector2(336.0, 145.0) # 按 390x844 与参考图占比微调
-const LAYER_SCALES := [1.0, 0.90, 0.83, 0.775] # 按 333/300/278/258 比例
-const LAYER_OFFSET_Y := [0.0, 30.0, 58.0, 84.0] # 421x750 画幅下的层级露出
+const BASE_CARD_SIZE := Vector2(520.0, 200.0)
+const LAYER_SCALES := [1.0, 0.90, 0.83, 0.775]
+const LAYER_OFFSET_Y := [0.0, 18.0, 36.0, 54.0]
 const LAYER_TINTS := [
 	Color(1.0, 1.0, 1.0, 1.0),      # 当前卡
 	Color(0.65, 0.65, 0.65, 1.0),   # 后1层：灰度最重
 	Color(0.80, 0.80, 0.80, 1.0),   # 后2层：中灰
 	Color(0.92, 0.92, 0.92, 1.0)    # 后3层：轻灰
 ]
-const BASE_TOP_Y := 232.0
+const BASE_TOP_Y := 100.0
 const ANIM_DURATION := 0.28
 const SWIPE_THRESHOLD := 45.0
 
@@ -98,7 +98,9 @@ func _rebuild_cards() -> void:
 func _calc_state(chapter_id: int) -> int:
 	if _save_manager != null and _save_manager.is_chapter_completed(chapter_id):
 		return STATE_DONE
-	if _save_manager != null and _save_manager.is_chapter_unlocked(chapter_id):
+	var chapter_manager := get_node_or_null("/root/ChapterManagerSingleton") as ChapterManager
+	var condition_checker := get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
+	if _save_manager != null and _save_manager.is_chapter_available(chapter_id, chapter_manager, condition_checker):
 		return STATE_IN_PROGRESS
 	return STATE_LOCKED
 

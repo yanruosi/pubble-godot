@@ -1,4 +1,4 @@
-level_id,display_name,truth_text,vocab_total,slot_count,slot1_enabled,slot2_enabled,slot3_enabled,slot4_enabled,slot2_unlock_type,slot2_unlock_value,slot3_unlock_type,slot3_unlock_value,required_slot,scene_image,art_base_width,art_base_height,coord_mode,hint_free_count,editor_note
-string,string,string,int,int,int,int,int,int,string,string,string,string,string,string,int,int,string,int,string
-关卡ID（与 levels 一致）,UI显示名,卷轴全对后真相全文,可收录词条总数,底部槽位数量,槽1卷轴启用,槽2身份启用,槽3小票启用,槽4预留,槽2解锁类型,槽2解锁参数,槽3解锁类型,槽3解锁参数,通关硬性要求槽位ID,场景底图路径,热点坐标基准宽,热点坐标基准高,坐标模式,每关免费提示次数,策划备注
-ch1_l01,序章·一个人的情人节,Aroz组合成员 Lee，让化妆师 May购买美式咖啡工，不是为了工作，而是为了给房卡。,6,3,1,1,1,0,any,"lee_portrait_unlocked,may_portrait_unlocked",any,"americano_icon_unlocked,apple_latte_icon_unlocked",slot1,res://art/levels/ch1_l01/bg.png,1536,1024,design_pixels,3,idol2 序章定稿；热点坐标基准 1536×1024（PSD）
+level_id,display_name,truth_text,vocab_total,slot_count,slot1_enabled,slot2_enabled,slot3_enabled,slot4_enabled,slot2_unlock_type,slot2_unlock_value,slot3_unlock_type,slot3_unlock_value,required_slot,scene_image,art_base_width,art_base_height,initial_pan_ratio,initial_pan_x,coord_mode,hint_free_count,editor_note
+string,string,string,int,int,int,int,int,int,string,string,string,string,string,string,int,int,float,float,string,int,string
+关卡ID（与 levels 一致）,UI显示名,卷轴全对后真相全文,可收录词条总数,底部槽位数量,槽1卷轴启用,槽2身份启用,槽3小票启用,槽4预留,槽2解锁类型,槽2解锁参数,槽3解锁类型,槽3解锁参数,通关硬性要求槽位ID,场景底图路径,热点坐标基准宽,热点坐标基准高,备用横移比例0左1右,设计稿中心线X对准屏幕中心,-1用比例,坐标模式,每关免费提示次数,策划备注
+ch1_l01,序章·一个人的情人节,Aroz组合成员 Leo，让化妆师 May购买美式咖啡，不是为了工作，而是为了给房卡。,9,3,1,1,1,0,any,"leo_portrait_unlocked,may_portrait_unlocked",any,"americano_icon_unlocked,apple_latte_icon_unlocked",slot1,res://art/levels/ch1_l01/bg.png,1280,720,0.5,-1,design_pixels,3,1280x720横屏基准

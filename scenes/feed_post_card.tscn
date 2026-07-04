@@ -4,7 +4,7 @@
 
 [node name="FeedPostCard" type="PanelContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
+size_flags_horizontal = 3
 mouse_filter = 0
 script = ExtResource("1_script")
 
@@ -55,11 +55,12 @@ autowrap_mode = 3
 text = "演出顺利结束"
 
 [node name="SingleImage" type="TextureRect" parent="CardMargin/MainVBox"]
-custom_minimum_size = Vector2(0, 186)
+custom_minimum_size = Vector2(350, 350)
 layout_mode = 2
+size_flags_horizontal = 0
 mouse_filter = 0
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 5
 
 [node name="SingleImagePlaceholder" type="ColorRect" parent="CardMargin/MainVBox/SingleImage"]
 layout_mode = 1
@@ -138,11 +139,12 @@ text = "1K"
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CommentIcon" type="ColorRect" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol"]
-custom_minimum_size = Vector2(18, 16)
+[node name="CommentIcon" type="TextureRect" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol"]
+custom_minimum_size = Vector2(18, 18)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.92, 0.92, 0.94, 1)
+expand_mode = 1
+stretch_mode = 5
 
 [node name="CommentCount" type="Label" parent="CardMargin/MainVBox/FollowBar/FollowBarMargin/FollowActions/CommentCol"]
 layout_mode = 2

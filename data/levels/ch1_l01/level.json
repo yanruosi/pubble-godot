@@ -2,23 +2,25 @@
   {
     "level_id": "ch1_l01",
     "display_name": "序章·一个人的情人节",
-    "truth_text": "Aroz组合成员 Lee，让化妆师 May购买美式咖啡工，不是为了工作，而是为了给房卡。",
-    "vocab_total": 6,
+    "truth_text": "Aroz组合成员 Leo，让化妆师 May购买美式咖啡，不是为了工作，而是为了给房卡。",
+    "vocab_total": 9,
     "slot_count": 3,
     "slot1_enabled": 1,
     "slot2_enabled": 1,
     "slot3_enabled": 1,
     "slot4_enabled": 0,
     "slot2_unlock_type": "any",
-    "slot2_unlock_value": "lee_portrait_unlocked,may_portrait_unlocked",
+    "slot2_unlock_value": "leo_portrait_unlocked,may_portrait_unlocked",
     "slot3_unlock_type": "any",
     "slot3_unlock_value": "americano_icon_unlocked,apple_latte_icon_unlocked",
     "required_slot": "slot1",
     "scene_image": "res://art/levels/ch1_l01/bg.png",
-    "art_base_width": 1536,
-    "art_base_height": 1024,
+    "art_base_width": 1280,
+    "art_base_height": 720,
+    "initial_pan_ratio": "0.5",
+    "initial_pan_x": "-1",
     "coord_mode": "design_pixels",
     "hint_free_count": 3,
-    "editor_note": "idol2 序章定稿；热点坐标基准 1536×1024（PSD）"
+    "editor_note": "1280x720横屏基准"
   }
 ]

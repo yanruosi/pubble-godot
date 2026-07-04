@@ -6,7 +6,14 @@ signal triggered(row: Dictionary)
 var hotspot_row: Dictionary = {}
 var _question_badge: Label
 
+static func is_hidden_visual(row: Dictionary) -> bool:
+	return str(row.get("visual_mode", "")).strip_edges() == "hidden"
+
 static func uses_question_badge(row: Dictionary) -> bool:
+	if str(row.get("hotspot_type", "")) == "close":
+		return false
+	if is_hidden_visual(row):
+		return false
 	if int(row.get("hide_question_only", 0)) == 1:
 		return true
 	if int(row.get("highlight", 0)) == 1:
@@ -25,16 +32,23 @@ func setup(row: Dictionary, rect: Rect2) -> void:
 	z_index = clampi(int(row.get("z_order", 0)), 0, 5)
 	z_as_relative = true
 	flat = false
-	var label_text: String = _resolve_label_text(row)
-	var placeholder_text: String = str(row.get("display_name", "")).strip_edges()
-	if label_text.is_empty() and not placeholder_text.is_empty():
-		label_text = placeholder_text
-	if not label_text.is_empty():
-		text = label_text
+	if is_hidden_visual(row) or str(row.get("hotspot_type", "")) == "close":
+		text = ""
+		_apply_hidden_style()
+	elif str(row.get("hotspot_type", "")) == "collect" and _resolve_label_text(row).is_empty():
+		text = ""
+		_apply_hidden_style()
+	elif not _resolve_label_text(row).is_empty():
+		text = _resolve_label_text(row)
 		_apply_text_label_style(int(row.get("highlight", 0)) == 1)
 	else:
-		text = ""
-		_apply_placeholder_style()
+		var placeholder_text: String = str(row.get("display_name", "")).strip_edges()
+		if not placeholder_text.is_empty():
+			text = placeholder_text
+			_apply_text_label_style(false)
+		else:
+			text = ""
+			_apply_placeholder_style()
 	if uses_question_badge(row):
 		_show_question_badge()
 	else:
@@ -57,12 +71,24 @@ func set_viewed() -> void:
 	modulate = Color(1, 1, 1, 1)
 
 func _resolve_label_text(row: Dictionary) -> String:
+	if is_hidden_visual(row):
+		return ""
 	var label: String = str(row.get("hotspot_label", "")).strip_edges()
 	if not label.is_empty():
 		return label
 	if int(row.get("highlight", 0)) == 1:
 		return str(row.get("display_name", "")).strip_edges()
 	return ""
+
+func _apply_hidden_style() -> void:
+	flat = true
+	var style := StyleBoxEmpty.new()
+	add_theme_stylebox_override("normal", style)
+	add_theme_stylebox_override("hover", style)
+	add_theme_stylebox_override("pressed", style)
+	add_theme_stylebox_override("focus", style)
+	add_theme_stylebox_override("disabled", style)
+	modulate = Color(1, 1, 1, 1)
 
 func _apply_text_label_style(is_collect: bool) -> void:
 	flat = true
@@ -91,33 +117,25 @@ func _apply_text_label_style(is_collect: bool) -> void:
 	add_theme_font_size_override("font_size", 20)
 
 func _on_pressed() -> void:
+	var mouse_pos: Vector2 = get_global_mouse_position()
+	if IdolBottomBar.blocks_hotspot_at(mouse_pos):
+		#region agent log
+		DebugSessionLog.write_debug("H3", "hotspot_node.gd:_on_pressed", "blocked_by_bottom_ui", {
+			"hotspot_id": str(hotspot_row.get("hotspot_id", "")),
+			"mouse_pos": [mouse_pos.x, mouse_pos.y]
+		})
+		#endregion
+		return
 	#region agent log
-	DebugSessionLog.write("hotspot_node.gd:_on_pressed", "hotspot_clicked", "F", {
+	var gr := get_global_rect()
+	DebugSessionLog.write_debug("H3", "hotspot_node.gd:_on_pressed", "hotspot_pressed", {
 		"hotspot_id": str(hotspot_row.get("hotspot_id", "")),
-		"label": text,
-		"global_rect": [global_position.x, global_position.y, size.x, size.y]
-	}, "post-fix")
+		"hotspot_type": str(hotspot_row.get("hotspot_type", "")),
+		"open_modal": str(hotspot_row.get("open_modal", "")),
+		"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y]
+	})
 	#endregion
 	triggered.emit(hotspot_row.duplicate(true))
-
-func _apply_debug_style() -> void:
-	var highlighted: bool = int(hotspot_row.get("highlight", 0)) == 1
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.95, 0.25, 0.2, 0.42) if highlighted else Color(1.0, 0.82, 0.18, 0.32)
-	style.border_color = Color(1.0, 0.62, 0.52, 1.0) if highlighted else Color(1.0, 0.92, 0.48, 0.92)
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_right = 8
-	style.corner_radius_bottom_left = 8
-	add_theme_stylebox_override("normal", style)
-	add_theme_stylebox_override("hover", style)
-	add_theme_stylebox_override("pressed", style)
-	add_theme_color_override("font_color", Color(1.0, 0.92, 0.86, 1.0) if highlighted else Color(1.0, 0.95, 0.45, 1.0))
-	add_theme_font_size_override("font_size", 18)
 
 func _apply_placeholder_style() -> void:
 	flat = true

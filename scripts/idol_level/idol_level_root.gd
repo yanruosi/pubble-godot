@@ -4,7 +4,6 @@ class_name IdolLevelRoot
 @export var level_id: String = ""
 
 const MAIN_UI_PATH := "res://scenes/main_ui.tscn"
-const DEBUG_TRACE_LOG_PATH := "D:/GAMES/pubble/debug-8f8638.log"
 
 @onready var bg_solid: ColorRect = $BgSolid
 @onready var scene_pan: ScenePanController = $SceneViewport
@@ -33,27 +32,6 @@ var _truth_text_label: Label
 var _truth_reward_label: Label
 var _menu_layer: CanvasLayer
 
-#region agent log
-func _dbg8(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "run1") -> void:
-	var payload := {
-		"sessionId": "8f8638",
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_TRACE_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_TRACE_LOG_PATH, FileAccess.WRITE)
-	if f == null:
-		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-#endregion
-
 func _ready() -> void:
 	_chapter_manager = get_node_or_null("/root/ChapterManagerSingleton") as ChapterManager
 	_save_manager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
@@ -71,9 +49,11 @@ func _ready() -> void:
 	_load_level()
 
 func _connect_children() -> void:
+	hotspot_layer.set_popup_panel(popup_layer)
 	scene_pan.pan_changed.connect(_on_scene_pan_changed)
 	hotspot_layer.popup_requested.connect(_on_hotspot_popup_requested)
 	hotspot_layer.modal_opened.connect(_on_hotspot_modal_opened)
+	hotspot_layer.modal_close_requested.connect(_on_hotspot_modal_close_requested)
 	hotspot_layer.vocab_requested.connect(_on_hotspot_vocab_requested)
 	hotspot_layer.event_emitted.connect(_on_hotspot_event_emitted)
 	popup_layer.popup_closed.connect(_on_popup_closed)
@@ -131,10 +111,38 @@ func _apply_background() -> void:
 	bg_image.visible = true
 
 func _configure_scene_pan() -> void:
-	var art_w: float = float(_level_config.get("art_base_width", 1536))
-	var art_h: float = float(_level_config.get("art_base_height", 1024))
+	var art_w: float = _level_float("art_base_width", 1280.0)
+	var art_h: float = _level_float("art_base_height", 720.0)
+	var pan_ratio: float = _level_float("initial_pan_ratio", 0.5)
+	var pan_x_design: float = _level_float("initial_pan_x", -1.0)
+	var use_focus_x: bool = _level_has_initial_pan_x()
+	# 必须先设初始视角，再 set_art_base（内部会 reset_pan_to_center）
+	scene_pan.set_initial_pan(pan_ratio, pan_x_design, use_focus_x)
 	scene_pan.set_art_base(art_w, art_h)
-	_sync_scene_view_to_hotspots()
+	scene_pan.call_deferred("reset_pan_to_center")
+	call_deferred("_sync_scene_view_to_hotspots")
+
+func _level_float(key: String, default: float) -> float:
+	if not _level_config.has(key):
+		return default
+	var raw: Variant = _level_config[key]
+	if raw is String:
+		var text: String = str(raw).strip_edges()
+		if text.is_empty():
+			return default
+		return float(text)
+	return float(raw)
+
+func _level_has_initial_pan_x() -> bool:
+	if not _level_config.has("initial_pan_x"):
+		return false
+	var raw: Variant = _level_config["initial_pan_x"]
+	if raw is String:
+		var text: String = str(raw).strip_edges()
+		if text.is_empty():
+			return false
+		return text != "-1"
+	return float(raw) >= 0.0
 
 func _on_scene_pan_changed(pan_x: float, scene_size: Vector2) -> void:
 	hotspot_layer.set_root_view(pan_x, scene_size)
@@ -172,9 +180,15 @@ func _on_hotspot_popup_requested(text: String, hotspot: Dictionary) -> void:
 	var in_sub_layer: bool = hotspot_layer.get_current_layer() != "root"
 	popup_layer.show_bubble(_resolve_bubble_text(text, hotspot), in_sub_layer)
 
-func _on_hotspot_modal_opened(modal_id: String, title: String, asset_path: String, popup_layout: String, _hotspot: Dictionary) -> void:
-	popup_layer.show_modal(modal_id, title, asset_path, popup_layout)
+func _on_hotspot_modal_opened(modal_id: String, title: String, asset_path: String, popup_layout: String, hotspot: Dictionary) -> void:
+	var design_size: Vector2 = HotspotLayer.coord_base_from_row(hotspot)
+	popup_layer.show_modal(modal_id, title, asset_path, popup_layout, design_size)
 	scene_pan.set_pan_locked(true)
+
+func _on_hotspot_modal_close_requested(_hotspot: Dictionary) -> void:
+	if popup_layer.has_overlay():
+		return
+	popup_layer.close_base_modal()
 
 func _on_hotspot_vocab_requested(vocab_id: String, hotspot: Dictionary) -> void:
 	var collected: bool = _vocab_bank.collect(vocab_id)
@@ -193,15 +207,6 @@ func _on_hotspot_vocab_requested(vocab_id: String, hotspot: Dictionary) -> void:
 	else:
 		bubble_text = "已收录过：%s" % str(vocab.get("text", vocab_id))
 	popup_layer.show_bubble(bubble_text, in_sub_layer)
-	#region agent log
-	DebugSessionLog.write("idol_level_root.gd:_on_hotspot_vocab_requested", "vocab_collected", "G", {
-		"vocab_id": vocab_id,
-		"hotspot_id": str(hotspot.get("hotspot_id", "")),
-		"current_layer": hotspot_layer.get_current_layer(),
-		"keep_modal": in_sub_layer,
-		"hotspot_layer_visible": hotspot_layer.visible
-	})
-	#endregion
 
 func _on_popup_bubble_dismissed(should_restore_layer: bool) -> void:
 	if not should_restore_layer:
@@ -212,11 +217,6 @@ func _on_popup_bubble_dismissed(should_restore_layer: bool) -> void:
 		return
 	hotspot_layer.return_to_root()
 	_sync_pan_lock()
-	#region agent log
-	DebugSessionLog.write("idol_level_root.gd:_on_popup_bubble_dismissed", "restored_root_after_bubble", "G", {
-		"current_layer": hotspot_layer.get_current_layer()
-	})
-	#endregion
 
 func _on_hotspot_event_emitted(event_id: String, _hotspot: Dictionary) -> void:
 	if event_id.is_empty():
@@ -240,6 +240,8 @@ func _resolve_bubble_text(text: String, hotspot: Dictionary) -> String:
 	return str(vocab_row.get("text", text))
 
 func _on_popup_closed(closed_modal_id: String) -> void:
+	if popup_layer.has_overlay():
+		popup_layer.close_overlay()
 	_apply_modal_close_events(closed_modal_id)
 	hotspot_layer.consume_last_opened_once_only()
 	var restore: Dictionary = hotspot_layer.restore_after_popup_close()
@@ -249,13 +251,14 @@ func _on_popup_closed(closed_modal_id: String) -> void:
 			parent_layer,
 			"线索",
 			str(restore.get("asset_path", "")),
-			str(restore.get("popup_layout", ""))
+			str(restore.get("popup_layout", "")),
+			restore.get("design_size", Vector2.ZERO)
 		)
 	_sync_pan_lock()
 
 func _apply_modal_close_events(closed_modal_id: String) -> void:
 	match closed_modal_id:
-		"modal_poster_lee":
+		"modal_poster_lee", "modal_102":
 			_slot2_unlock_events["poster_viewed"] = true
 		"modal_badge_may":
 			_slot2_unlock_events["badge_viewed"] = true
@@ -263,6 +266,22 @@ func _apply_modal_close_events(closed_modal_id: String) -> void:
 	_sync_slot_unlock_events()
 
 func _on_bottom_slot_pressed(slot_id: String) -> void:
+	# 打开槽位前先关掉场景气泡，避免与底栏操作叠在一起
+	popup_layer.hide_all()
+	#region agent log
+	_agent_debug_log("H2", "idol_level_root.gd:_on_bottom_slot_pressed", "slot_signal_received", {"slot_id": slot_id})
+	DebugSessionLog.write_debug("H13", "idol_level_root.gd:_on_bottom_slot_pressed", "before_open_slot", {
+		"slot_id": slot_id,
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer(),
+		"scroll_visible": scroll_panel.visible,
+		"identity_visible": identity_panel.visible,
+		"mapping_visible": mapping_panel.visible,
+		"bottom_z_index": bottom_bar.z_index,
+		"scroll_z_index": scroll_panel.z_index,
+		"popup_z_index": popup_layer.z_index
+	})
+	#endregion
 	bottom_bar.set_active_slot(slot_id)
 	match slot_id:
 		"slot1":
@@ -278,8 +297,27 @@ func _on_bottom_slot_pressed(slot_id: String) -> void:
 			identity_panel.close_panel(false)
 			mapping_panel.open_panel()
 	_sync_hotspot_layer_visibility()
+	#region agent log
+	DebugSessionLog.write_debug("H13", "idol_level_root.gd:_on_bottom_slot_pressed", "after_open_slot", {
+		"slot_id": slot_id,
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer(),
+		"scroll_visible": scroll_panel.visible,
+		"identity_visible": identity_panel.visible,
+		"mapping_visible": mapping_panel.visible
+	})
+	#endregion
 
 func _on_slot_panel_closed() -> void:
+	#region agent log
+	DebugSessionLog.write_debug("H12", "idol_level_root.gd:_on_slot_panel_closed", "slot_panel_closed_signal", {
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer(),
+		"scroll_visible": scroll_panel.visible,
+		"identity_visible": identity_panel.visible,
+		"mapping_visible": mapping_panel.visible
+	})
+	#endregion
 	bottom_bar.set_active_slot("")
 	_sync_hotspot_layer_visibility()
 
@@ -288,6 +326,14 @@ func _sync_hotspot_layer_visibility() -> void:
 		return
 	var slot_open: bool = scroll_panel.visible or identity_panel.visible or mapping_panel.visible
 	hotspot_layer.visible = not slot_open
+	#region agent log
+	DebugSessionLog.write_debug("H14", "idol_level_root.gd:_sync_hotspot_layer_visibility", "sync_visibility", {
+		"slot_open": slot_open,
+		"hotspot_visible": hotspot_layer.visible,
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer()
+	})
+	#endregion
 	_sync_pan_lock()
 
 func _sync_pan_lock() -> void:
@@ -396,21 +442,30 @@ func _apply_completion() -> void:
 	print("【通关存档自检】【%s】通关前 completed=%s" % [level_id, str(before_completed)])
 	_first_clear_this_finish = not before_completed
 	_save_manager.mark_level_completed(level_id, true)
-	var cheer_reward: int = int(_level_row.get("cheer_reward", 0))
-	if _first_clear_this_finish and cheer_reward > 0:
-		_save_manager.set_cheer_count(_save_manager.get_cheer_count() + cheer_reward)
-	print("【通关存档自检】【%s】通关后 completed=%s cheer=%d" % [level_id, str(_save_manager.is_level_completed(level_id)), _save_manager.get_cheer_count()])
+	print("【通关存档自检】【%s】通关后 completed=%s" % [level_id, str(_save_manager.is_level_completed(level_id))])
+	_mark_chapter_completed_if_all_done()
+
+func _mark_chapter_completed_if_all_done() -> void:
+	if _save_manager == null or _chapter_manager == null:
+		return
+	var chapter_id: int = int(_level_row.get("chapter_id", 0))
+	if chapter_id <= 0:
+		return
+	var chapter_levels: Array = _chapter_manager.get_levels_for_chapter(chapter_id)
+	if chapter_levels.is_empty():
+		return
+	for item in chapter_levels:
+		if not (item is Dictionary):
+			continue
+		var lid: String = str((item as Dictionary).get("level_id", ""))
+		if lid.is_empty() or not _save_manager.is_level_completed(lid):
+			return
+	_save_manager.mark_chapter_completed(chapter_id, true)
 
 func _show_truth_overlay() -> void:
 	_ensure_truth_overlay()
 	_truth_text_label.text = str(_level_config.get("truth_text", "真相尚未配置。"))
-	var cheer_reward: int = int(_level_row.get("cheer_reward", 0))
-	if _first_clear_this_finish and cheer_reward > 0:
-		_truth_reward_label.text = "获得应援棒 × %d" % cheer_reward
-	elif cheer_reward > 0:
-		_truth_reward_label.text = "关卡完成（应援棒已在首次通关时领取）"
-	else:
-		_truth_reward_label.text = "关卡完成"
+	_truth_reward_label.text = "关卡完成"
 	_truth_layer.visible = true
 
 func _ensure_truth_overlay() -> void:
@@ -463,29 +518,16 @@ func _ensure_truth_overlay() -> void:
 	vbox.add_child(_truth_reward_label)
 
 	var btn := Button.new()
-	btn.text = "返回关卡选择"
+	btn.text = "返回艺人动态"
 	btn.custom_minimum_size = Vector2(220, 48)
 	btn.pressed.connect(_on_truth_button_pressed)
 	vbox.add_child(btn)
 
 func _on_truth_button_pressed() -> void:
-	#region agent log
-	_dbg8(
-		"H1",
-		"idol_level_root.gd:_on_truth_button_pressed",
-		"truth confirm nav",
-		{
-			"target_page": "level_select",
-			"chapter_id": int(_level_row.get("chapter_id", 0)),
-			"focus_level_id": level_id
-		}
-	)
-	#endregion
 	if _save_manager != null:
 		_save_manager.set_pending_post_level_nav({
-			"page": "level_select",
-			"chapter_id": int(_level_row.get("chapter_id", 0)),
-			"focus_level_id": level_id
+			"page": "feed",
+			"tab": "artist"
 		})
 	get_tree().change_scene_to_file(MAIN_UI_PATH)
 
@@ -494,22 +536,13 @@ func _build_top_chrome() -> void:
 	_top_title.name = "TopTitle"
 	_top_title.text = level_id
 	_top_title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_top_title.offset_left = 72
+	_top_title.offset_left = 16
 	_top_title.offset_top = 28
 	_top_title.offset_right = -120
 	_top_title.offset_bottom = 72
 	_top_title.add_theme_color_override("font_color", Color(0.92, 0.9, 0.84, 1))
 	_top_title.add_theme_font_size_override("font_size", 20)
 	add_child(_top_title)
-
-	var search := Button.new()
-	search.text = "⌕"
-	search.custom_minimum_size = Vector2(52, 52)
-	search.offset_left = 16
-	search.offset_top = 116
-	search.offset_right = 68
-	search.offset_bottom = 168
-	add_child(search)
 
 	var hint := Button.new()
 	hint.text = "?"
@@ -533,17 +566,6 @@ func _build_top_chrome() -> void:
 	add_child(menu)
 
 func _on_menu_pressed() -> void:
-	#region agent log
-	_dbg8(
-		"H1",
-		"idol_level_root.gd:_on_menu_pressed",
-		"hamburger pressed -> open in-level menu",
-		{
-			"chapter_id": int(_level_row.get("chapter_id", 0)),
-			"level_id": level_id
-		}
-	)
-	#endregion
 	_toggle_menu(true)
 
 func _truth_style() -> StyleBoxFlat:
@@ -610,11 +632,11 @@ func _ensure_menu_layer() -> void:
 	btn_restart.pressed.connect(_on_menu_restart_pressed)
 	vbox.add_child(btn_restart)
 
-	var btn_level_select := Button.new()
-	btn_level_select.text = "返回关卡选择"
-	btn_level_select.custom_minimum_size = Vector2(220, 46)
-	btn_level_select.pressed.connect(_on_menu_return_level_select_pressed)
-	vbox.add_child(btn_level_select)
+	var btn_return_feed := Button.new()
+	btn_return_feed.text = "返回艺人动态"
+	btn_return_feed.custom_minimum_size = Vector2(220, 46)
+	btn_return_feed.pressed.connect(_on_menu_return_feed_pressed)
+	vbox.add_child(btn_return_feed)
 
 	var btn_cancel := Button.new()
 	btn_cancel.text = "取消"
@@ -625,35 +647,36 @@ func _ensure_menu_layer() -> void:
 	vbox.add_child(btn_cancel)
 
 func _on_menu_restart_pressed() -> void:
-	#region agent log
-	_dbg8(
-		"H1",
-		"idol_level_root.gd:_on_menu_restart_pressed",
-		"restart level from in-level menu",
-		{
-			"level_id": level_id
-		}
-	)
-	#endregion
 	_toggle_menu(false)
 	_load_level()
 
-func _on_menu_return_level_select_pressed() -> void:
-	#region agent log
-	_dbg8(
-		"H1",
-		"idol_level_root.gd:_on_menu_return_level_select_pressed",
-		"return level select from in-level menu",
-		{
-			"chapter_id": int(_level_row.get("chapter_id", 0)),
-			"focus_level_id": ""
-		}
-	)
-	#endregion
+func _on_menu_return_feed_pressed() -> void:
 	if _save_manager != null:
 		_save_manager.set_pending_post_level_nav({
-			"page": "level_select",
-			"chapter_id": int(_level_row.get("chapter_id", 0)),
-			"focus_level_id": ""
+			"page": "feed",
+			"tab": "artist"
 		})
 	get_tree().change_scene_to_file(MAIN_UI_PATH)
+
+#region agent log
+const AGENT_DEBUG_LOG_PATH := "res://debug-0ae22b.log"
+const AGENT_DEBUG_SESSION_ID := "0ae22b"
+
+func _agent_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
+	var payload := {
+		"sessionId": AGENT_DEBUG_SESSION_ID,
+		"hypothesisId": hypothesis_id,
+		"location": location,
+		"message": message,
+		"data": data,
+		"timestamp": Time.get_unix_time_from_system() * 1000
+	}
+	var file := FileAccess.open(AGENT_DEBUG_LOG_PATH, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(AGENT_DEBUG_LOG_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_string(JSON.stringify(payload) + "\n")
+	file.close()
+#endregion

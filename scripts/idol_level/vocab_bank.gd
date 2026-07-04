@@ -6,11 +6,13 @@ signal changed(collected_count: int, total_count: int)
 
 var _vocab_by_id: Dictionary = {}
 var _collected_ids: Dictionary = {}
+var _collected_order: Array[String] = []
 var _total_count: int = 0
 
 func setup(vocab_rows: Array, vocab_total: int) -> void:
 	_vocab_by_id.clear()
 	_collected_ids.clear()
+	_collected_order.clear()
 	_total_count = max(vocab_total, vocab_rows.size())
 	for item in vocab_rows:
 		if not (item is Dictionary):
@@ -31,6 +33,7 @@ func collect(vocab_id: String) -> bool:
 	if bool(_collected_ids.get(vocab_id, false)):
 		return false
 	_collected_ids[vocab_id] = true
+	_collected_order.append(vocab_id)
 	var vocab: Dictionary = _vocab_by_id[vocab_id].duplicate(true)
 	vocab_collected.emit(vocab)
 	changed.emit(collected_count(), _total_count)
@@ -54,16 +57,15 @@ func get_vocab_text(vocab_id: String) -> String:
 
 func get_collected_vocab(filter_tag: String = "") -> Array:
 	var result: Array = []
-	for vocab_id in _collected_ids.keys():
+	for vocab_id in _collected_order:
+		if not bool(_collected_ids.get(vocab_id, false)):
+			continue
 		var row: Dictionary = _vocab_by_id.get(vocab_id, {})
 		if row.is_empty():
 			continue
 		if not filter_tag.is_empty() and str(row.get("tag", "")) != filter_tag:
 			continue
 		result.append(row.duplicate(true))
-	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return str(a.get("text", "")) < str(b.get("text", ""))
-	)
 	return result
 
 func is_name_vocab(vocab_id: String) -> bool:

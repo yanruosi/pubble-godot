@@ -3,6 +3,7 @@ class_name MappingSlotPanel
 
 const SlotDrag := preload("res://scripts/idol_level/slot_drag_widgets.gd")
 const ICON_SIZE := 88.0
+const MAPPING_KEEP_RECT := Rect2(32, 76, 1216, 524)
 
 signal completed
 signal closed
@@ -18,9 +19,10 @@ var _selected_vocab_id: String = ""
 var _unlock_events: Dictionary = {}
 var _active_rows: Array = []
 var _default_status := "拖动饮料词条到图标下方，全部填满后自动判定。"
+var _dim: ColorRect
 
 func _ready() -> void:
-	z_index = 30
+	z_index = 240
 	_build_ui()
 	_set_panel_active(false)
 
@@ -50,21 +52,36 @@ func open_panel() -> void:
 	_render_rows()
 	_refresh_vocab_chips()
 	_refresh_all_blanks()
+	#region agent log
+	DebugSessionLog.write_debug("H10", "mapping_slot_panel.gd:open_panel", "slot_panel_open", {
+		"visible": visible,
+		"z_index": z_index,
+		"mouse_filter": mouse_filter
+	})
+	#endregion
 
 func close_panel(emit_signal := true) -> void:
 	_set_panel_active(false)
+	#region agent log
+	DebugSessionLog.write_debug("H12", "mapping_slot_panel.gd:close_panel", "slot_panel_close", {
+		"emit_signal": emit_signal,
+		"visible": visible,
+		"z_index": z_index,
+		"mouse_filter": mouse_filter
+	})
+	#endregion
 	if emit_signal:
 		closed.emit()
 
 func _set_panel_active(active: bool) -> void:
 	visible = active
 	mouse_filter = Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
+	set_process_input(active)
 
 func _build_ui() -> void:
-	var dim := ColorRect.new()
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.color = Color(0, 0, 0, 0.68)
-	add_child(dim)
+	_dim = SlotPanelLayout.make_scene_mask()
+	_dim.gui_input.connect(_on_dim_gui_input)
+	add_child(_dim)
 
 	_status_label = Label.new()
 	_status_label.text = _default_status
@@ -73,7 +90,7 @@ func _build_ui() -> void:
 	_status_label.add_theme_font_size_override("font_size", 18)
 	_status_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	_status_label.offset_left = 80
-	_status_label.offset_top = 112
+	_status_label.offset_top = 60
 	_status_label.offset_right = -80
 	_status_label.offset_bottom = 148
 	add_child(_status_label)
@@ -82,9 +99,9 @@ func _build_ui() -> void:
 	puzzle_panel.name = "PuzzlePanel"
 	puzzle_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	puzzle_panel.offset_left = 32
-	puzzle_panel.offset_top = 128
+	puzzle_panel.offset_top = 76
 	puzzle_panel.offset_right = -32
-	puzzle_panel.offset_bottom = 392
+	puzzle_panel.offset_bottom = 320
 	puzzle_panel.add_theme_stylebox_override("panel", _paper_style())
 	add_child(puzzle_panel)
 
@@ -106,7 +123,7 @@ func _build_ui() -> void:
 	vocab_panel.offset_left = 32
 	vocab_panel.offset_top = 406
 	vocab_panel.offset_right = -32
-	vocab_panel.offset_bottom = 704
+	vocab_panel.offset_bottom = 600
 	vocab_panel.add_theme_stylebox_override("panel", _vocab_panel_style())
 	add_child(vocab_panel)
 
@@ -137,7 +154,7 @@ func _build_ui() -> void:
 	close_btn.offset_left = 30
 	close_btn.offset_top = -136
 	close_btn.offset_right = 126
-	close_btn.offset_bottom = -92
+	close_btn.offset_bottom = -80
 	close_btn.pressed.connect(func() -> void:
 		close_panel()
 	)
@@ -373,6 +390,26 @@ func _blank_style() -> StyleBoxFlat:
 	style.corner_radius_bottom_right = 4
 	style.corner_radius_bottom_left = 4
 	return style
+
+func _on_dim_gui_input(event: InputEvent) -> void:
+	_try_dismiss_on_outside_click(event, "dim")
+
+func _input(event: InputEvent) -> void:
+	_try_dismiss_on_outside_click(event, "input")
+
+func _try_dismiss_on_outside_click(event: InputEvent, source: String) -> void:
+	if not visible:
+		return
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var local_pos := get_local_mouse_position()
+	if SlotPanelLayout.should_keep_open_on_click(local_pos, MAPPING_KEEP_RECT):
+		return
+	close_panel()
+	if source == "dim":
+		_dim.accept_event()
+	else:
+		get_viewport().set_input_as_handled()
 
 func _chip_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

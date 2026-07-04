@@ -16,12 +16,7 @@ const THIRD_LAYER_ALPHA := 0.68
 const THIRD_LAYER_OFFSET_X := 92.0
 const ENTER_FULL_PROGRESS := 0.78
 const LEAVING_EXTRA_SHIFT_X := 30.0
-const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-fe0741.log"
-const DEBUG_TRACE_LOG_PATH := "D:/GAMES/pubble/debug-8f8638.log"
-const _DebugLog := preload("res://scripts/idol_level/debug_session_log.gd")
-
 @onready var back_button: Button = $BackButton
-@onready var cheer_value: Label = $CheerGroup/CheerValue
 @onready var left_card: PanelContainer = $Carousel/LeftCard
 @onready var center_card: PanelContainer = $Carousel/CenterCard
 @onready var right_card: PanelContainer = $Carousel/RightCard
@@ -69,53 +64,14 @@ var _last_foreground_side: int = 0
 var _far_left_card: PanelContainer
 var _far_right_card: PanelContainer
 
-#region agent log
-func _dbg(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "run1") -> void:
-	var payload := {
-		"sessionId": "fe0741",
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if f == null:
-		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-#endregion
+func _dbg(_hypothesis_id: String, _location: String, _message: String, _data: Dictionary = {}, _run_id: String = "run1") -> void:
+	pass
 
-#region agent log
-func _dbg8(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "run1") -> void:
-	var payload := {
-		"sessionId": "8f8638",
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_TRACE_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_TRACE_LOG_PATH, FileAccess.WRITE)
-	if f == null:
-		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-#endregion
+func _dbg8(_hypothesis_id: String, _location: String, _message: String, _data: Dictionary = {}, _run_id: String = "run1") -> void:
+	pass
 
-#region agent log
-func _dbg_e48(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "pre-fix") -> void:
-	_DebugLog.write(location, message, hypothesis_id, data, run_id)
-#endregion
-
+func _dbg_e48(_hypothesis_id: String, _location: String, _message: String, _data: Dictionary = {}, _run_id: String = "pre-fix") -> void:
+	pass
 
 func _carousel_layout_snapshot() -> Dictionary:
 	return {
@@ -147,21 +103,21 @@ func _reset_carousel_interaction_state() -> void:
 func _restore_carousel_default_layout() -> void:
 	left_card.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	left_card.offset_left = 8.0
-	left_card.offset_top = 285.0
+	left_card.offset_top = 140.0
 	left_card.offset_right = 169.0
-	left_card.offset_bottom = 465.0
+	left_card.offset_bottom = 300.0
 	center_card.anchor_left = 0.5
 	center_card.anchor_right = 0.5
 	center_card.offset_left = -130.0
-	center_card.offset_top = 230.0
+	center_card.offset_top = 100.0
 	center_card.offset_right = 130.0
-	center_card.offset_bottom = 520.0
+	center_card.offset_bottom = 340.0
 	right_card.anchor_left = 1.0
 	right_card.anchor_right = 1.0
 	right_card.offset_left = -169.0
-	right_card.offset_top = 285.0
+	right_card.offset_top = 140.0
 	right_card.offset_right = -8.0
-	right_card.offset_bottom = 465.0
+	right_card.offset_bottom = 300.0
 
 
 func _realign_carousel_after_show() -> void:
@@ -500,7 +456,6 @@ func focus_level_by_id(level_id: String) -> void:
 
 
 func _refresh() -> void:
-	_refresh_cheer()
 	_update_side_cards()
 	_update_center_card()
 	_update_dots()
@@ -508,15 +463,6 @@ func _refresh() -> void:
 	condition_bubble.visible = false
 	if not _animating and not _dragging:
 		_apply_carousel_rest_visual()
-
-
-func _refresh_cheer() -> void:
-	if cheer_value == null:
-		return
-	if _save_manager == null:
-		cheer_value.text = "0"
-	else:
-		cheer_value.text = str(_save_manager.get_cheer_count())
 
 
 func _update_side_cards() -> void:
@@ -589,67 +535,33 @@ func _update_action() -> void:
 		return
 
 	action_button.disabled = false
+	progress_panel.visible = false
+
 	if not _is_chapter_unlocked():
-		progress_panel.visible = false
-		## 章节解锁只在「本章第一关」位展示，避免滑到后续关仍显示易误解的解锁按钮。
-		if _current_index != 0:
-			action_button.visible = false
-			return
-		action_button.visible = true
-		var condition_id: int = int(_chapter.get("condition_id", 0))
-		var cost_text: String = _chapter_unlock_cost_text(condition_id)
-		if cost_text.is_empty():
-			action_button.text = "解锁章节"
-		else:
-			action_button.text = "%s 解锁" % cost_text
+		action_button.visible = false
 		return
 
 	if _is_current_level_unlocked():
-		action_button.visible = false
-		progress_panel.visible = false
+		action_button.visible = true
+		action_button.text = "探索"
 		return
 
-	progress_panel.visible = false
-	## 应援棒/付费解锁关卡仅第一关可能出现；后续关靠通关解锁（如 condition type 3）。
-	if _current_index == 0 and _can_unlock_current_level_with_button():
-		action_button.visible = true
-		var lv_cost: int = _current_level_unlock_cost()
-		if lv_cost > 0:
-			action_button.text = "%s 解锁" % _current_level_unlock_cost_text()
-		else:
-			action_button.text = "解锁关卡"
-		return
 	action_button.visible = false
 
 
 func _is_chapter_unlocked() -> bool:
 	if _chapter_id <= 0:
 		return false
-	if _save_manager != null:
-		return _save_manager.is_chapter_unlocked(_chapter_id)
-	return false
-
-
-func _chapter_unlock_cost_text(condition_id: int) -> String:
-	if condition_id <= 0 or _chapter_manager == null:
-		return ""
-	var condition: Dictionary = _chapter_manager.get_condition_by_id(condition_id)
-	if int(condition.get("type", 0)) != 1:
-		return ""
-	var param: int = int(condition.get("param", 0))
-	if param <= 0:
-		return ""
-	return "应援棒 %d" % param
+	if _save_manager == null:
+		return false
+	return _save_manager.is_chapter_available(_chapter_id, _chapter_manager, _condition_checker)
 
 
 func _on_action_pressed() -> void:
 	if _levels.is_empty():
 		return
-	if not _is_chapter_unlocked():
-		_try_unlock_chapter()
-		return
 	if not _is_current_level_unlocked():
-		_try_unlock_current_level()
+		_show_current_level_locked_bubble()
 		return
 	_start_current_level()
 
@@ -662,65 +574,6 @@ func _start_current_level() -> void:
 	if _save_manager != null:
 		_save_manager.set_recent_opened_level_id(str(level.get("level_id", "")))
 	level_start_requested.emit(level)
-
-
-func _try_unlock_chapter() -> void:
-	var condition_id: int = int(_chapter.get("condition_id", 0))
-	if _condition_checker == null or not _condition_checker.is_condition_met(condition_id):
-		var fail_text: String = ""
-		if _condition_checker != null:
-			fail_text = _condition_checker.get_fail_text(condition_id)
-		if fail_text.is_empty():
-			fail_text = "解锁条件不足"
-		message_label.text = fail_text
-		return
-
-	var condition: Dictionary = {}
-	if _chapter_manager != null:
-		condition = _chapter_manager.get_condition_by_id(condition_id)
-	var cost: int = 0
-	if int(condition.get("type", 0)) == 1:
-		cost = int(condition.get("param", 0))
-
-	if _save_manager != null:
-		if cost > 0:
-			_save_manager.set_cheer_count(_save_manager.get_cheer_count() - cost)
-		_save_manager.mark_chapter_unlocked(_chapter_id, true)
-		_save_manager.mark_chapter_entered(_chapter_id)
-		## 章节 condition_id 与首张关卡 unlock_condition_id 相同时，应援棒已在上方扣除一次，同步解锁首关，避免再点一次按钮二次扣费。
-		if not _levels.is_empty():
-			var first_level: Dictionary = _levels[0]
-			if int(first_level.get("unlock_condition_id", 0)) == condition_id:
-				var lid: String = str(first_level.get("level_id", ""))
-				if not lid.is_empty():
-					_save_manager.mark_level_unlocked(lid, true)
-
-	message_label.text = "章节已解锁"
-	chapter_state_changed.emit()
-	_refresh()
-
-
-func _try_unlock_current_level() -> void:
-	if not _can_unlock_current_level_with_button():
-		_show_current_level_locked_bubble()
-		return
-
-	var level: Dictionary = _current_level()
-	var level_id: String = str(level.get("level_id", ""))
-	var condition_id: int = int(level.get("unlock_condition_id", 0))
-	if _condition_checker == null or not _condition_checker.is_condition_met(condition_id):
-		_show_current_level_locked_bubble()
-		return
-
-	var cost: int = _current_level_unlock_cost()
-	if _save_manager != null:
-		if cost > 0:
-			_save_manager.set_cheer_count(_save_manager.get_cheer_count() - cost)
-		_save_manager.mark_level_unlocked(level_id, true)
-
-	chapter_state_changed.emit()
-	_refresh()
-	message_label.text = "关卡已解锁"
 
 
 func _current_level() -> Dictionary:
@@ -791,19 +644,6 @@ func _is_level_unlocked_for_dict(level: Dictionary) -> bool:
 		)
 		#endregion
 		return true
-	if _is_condition_pay_unlock(condition_id):
-		#region agent log
-		_dbg8(
-			"H5",
-			"level_select_page.gd:_is_level_unlocked_for_dict",
-			"locked because pay-unlock condition not manually unlocked",
-			{
-				"level_id": level_id,
-				"condition_id": condition_id
-			}
-		)
-		#endregion
-		return false
 	if _condition_checker == null:
 		#region agent log
 		_dbg8(
@@ -839,46 +679,11 @@ func _is_current_level_unlocked() -> bool:
 	return _is_level_unlocked_for_dict(_current_level())
 
 
-func _can_unlock_pay_for_level(level: Dictionary) -> bool:
-	if _levels.is_empty() or not _is_chapter_unlocked():
-		return false
-	var condition_id: int = int(level.get("unlock_condition_id", 0))
-	return _is_condition_pay_unlock(condition_id)
-
-
-func _can_unlock_current_level_with_button() -> bool:
-	return _can_unlock_pay_for_level(_current_level())
-
-
-func _is_condition_pay_unlock(condition_id: int) -> bool:
-	if condition_id <= 0 or _chapter_manager == null:
-		return false
-	var condition: Dictionary = _chapter_manager.get_condition_by_id(condition_id)
-	return int(condition.get("type", 0)) == 1
-
-
-func _current_level_unlock_cost() -> int:
-	var condition_id: int = int(_current_level().get("unlock_condition_id", 0))
-	if condition_id <= 0 or _chapter_manager == null:
-		return 0
-	var condition: Dictionary = _chapter_manager.get_condition_by_id(condition_id)
-	if int(condition.get("type", 0)) != 1:
-		return 0
-	return int(condition.get("param", 0))
-
-
-func _current_level_unlock_cost_text() -> String:
-	var c: int = _current_level_unlock_cost()
-	if c <= 0:
-		return ""
-	return "应援棒 %d" % c
-
-
 func _show_level_locked_prompt(level: Dictionary, for_center_card: bool = false) -> void:
 	var condition_id: int = int(level.get("unlock_condition_id", 0))
 	var text: String = ""
-	if for_center_card and _can_unlock_pay_for_level(level) and _condition_checker != null and _condition_checker.is_condition_met(condition_id):
-		text = "请先点击下方按钮解锁"
+	if not _is_chapter_unlocked() and _condition_checker != null:
+		text = _condition_checker.get_fail_text(int(_chapter.get("condition_id", 0)))
 	elif _condition_checker != null:
 		text = _condition_checker.get_fail_text(condition_id)
 	if text.is_empty():

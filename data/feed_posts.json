@@ -1,82 +1,86 @@
 [
   {
     "post_id": "ch1_1_post",
-    "chapter_id": 1,
+    "type": 901,
+    "condition_id": 4001,
     "level_id": "ch1_l01",
-    "text": "练习室日常一条。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "name": "Lee",
+    "time": "02.14.2026",
+    "text": "一个人的情人节,晚上见！",
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "res://art/post/artist101.png",
+    "image_path2": ""
   },
   {
     "post_id": "ch1_2_post",
-    "chapter_id": 1,
+    "type": 901,
+    "condition_id": 4002,
     "level_id": "ch1_l02",
+    "name": "Lee",
+    "time": "04.30.2023",
     "text": "后台走廊线索。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "res://art/post/artist101.png",
+    "image_path2": ""
   },
   {
     "post_id": "ch1_3_post",
-    "chapter_id": 1,
+    "type": 901,
+    "condition_id": 4003,
     "level_id": "ch1_l03",
+    "name": "Lee",
+    "time": "04.30.2024",
     "text": "后台走廊2。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "res://art/post/artist101.png",
+    "image_path2": ""
   },
   {
     "post_id": "ch1_4_post",
-    "chapter_id": 1,
+    "type": 901,
+    "condition_id": 4004,
     "level_id": "ch1_l04",
+    "name": "Lee",
+    "time": "04.30.2025",
     "text": "后台走廊3。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "res://art/post/artist101.png",
+    "image_path2": ""
   },
   {
     "post_id": "ch1_5_post",
-    "chapter_id": 1,
+    "type": 901,
+    "condition_id": 4005,
     "level_id": "ch1_l05",
+    "name": "Lee",
+    "time": "04.30.2026",
     "text": "后台走廊4（章末关）。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "res://art/post/artist101.png",
+    "image_path2": ""
   },
   {
-    "post_id": "ch2_1_post",
-    "chapter_id": 2,
-    "level_id": "ch2_201",
-    "text": "练习室日常一条。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "post_id": "fanspost1",
+    "type": 902,
+    "condition_id": 4001,
+    "level_id": "",
+    "name": "momo",
+    "time": "02.14.2026",
+    "text": "期待期待！冲啊！Brave第一个出个人单曲的含金量！！",
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "",
+    "image_path2": ""
   },
   {
-    "post_id": "ch2_2_post",
-    "chapter_id": 2,
-    "level_id": "ch2_202",
-    "text": "后台走廊线索。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
-  },
-  {
-    "post_id": "ch2_3_post",
-    "chapter_id": 2,
-    "level_id": "ch2_203",
-    "text": "后台走廊2。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
-  },
-  {
-    "post_id": "ch2_4_post",
-    "chapter_id": 2,
-    "level_id": "ch2_204",
-    "text": "后台走廊3。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
-  },
-  {
-    "post_id": "ch2_5_post",
-    "chapter_id": 2,
-    "level_id": "ch2_205",
-    "text": "后台走廊4（章末关）。",
-    "image_path": "res://art/feed/placeholder_post.png",
-    "avatar_path": "res://art/feed/placeholder_avatar.png"
+    "post_id": "fanspost2",
+    "type": 902,
+    "condition_id": 4001,
+    "level_id": "",
+    "name": "momo",
+    "time": "02.14.2026",
+    "text": "期待晚上的情人节和老公见面！Leo我爱你！",
+    "avatar_path": "res://art/post/artist1.png",
+    "image_path": "",
+    "image_path2": ""
   }
 ]

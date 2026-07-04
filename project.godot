@@ -10,9 +10,9 @@ config_version=5
 
 [application]
 
-config/name="pubble"
-run/main_scene="uid://d3x3w313wwf0f"
-config/features=PackedStringArray("4.6", "GL Compatibility")
+config/name="pubble (4.6)"
+run/main_scene="res://scenes/title_screen.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -23,11 +23,10 @@ ConditionCheckerSingleton="*res://scripts/condition_checker.gd"
 
 [display]
 
-window/size/viewport_width=390
-window/size/viewport_height=844
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
-window/handheld/orientation=1
+window/stretch/aspect="keep_height"
 
 [physics]
 

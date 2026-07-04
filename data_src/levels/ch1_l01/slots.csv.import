@@ -3,13 +3,11 @@
 importer="csv_translation"
 type="Translation"
 uid="uid://dhvo35hsa1w2k"
+valid=false
 
 [deps]
 
-files=["res://data_src/levels/ch1_l01/slots.slot.translation", "res://data_src/levels/ch1_l01/slots.row.translation", "res://data_src/levels/ch1_l01/slots.order.translation", "res://data_src/levels/ch1_l01/slots.prefix.translation", "res://data_src/levels/ch1_l01/slots.suffix.translation", "res://data_src/levels/ch1_l01/slots.left.translation", "res://data_src/levels/ch1_l01/slots.answer.translation", "res://data_src/levels/ch1_l01/slots.filter.translation", "res://data_src/levels/ch1_l01/slots.unlock.translation", "res://data_src/levels/ch1_l01/slots.required.translation", "res://data_src/levels/ch1_l01/slots.placeholder.translation", "res://data_src/levels/ch1_l01/slots.placeholder.translation", "res://data_src/levels/ch1_l01/slots.editor.translation"]
-
 source_file="res://data_src/levels/ch1_l01/slots.csv"
-dest_files=["res://data_src/levels/ch1_l01/slots.slot.translation", "res://data_src/levels/ch1_l01/slots.row.translation", "res://data_src/levels/ch1_l01/slots.order.translation", "res://data_src/levels/ch1_l01/slots.prefix.translation", "res://data_src/levels/ch1_l01/slots.suffix.translation", "res://data_src/levels/ch1_l01/slots.left.translation", "res://data_src/levels/ch1_l01/slots.answer.translation", "res://data_src/levels/ch1_l01/slots.filter.translation", "res://data_src/levels/ch1_l01/slots.unlock.translation", "res://data_src/levels/ch1_l01/slots.required.translation", "res://data_src/levels/ch1_l01/slots.placeholder.translation", "res://data_src/levels/ch1_l01/slots.placeholder.translation", "res://data_src/levels/ch1_l01/slots.editor.translation"]
 
 [params]
 

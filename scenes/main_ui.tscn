@@ -1,13 +1,12 @@
 [gd_scene format=3 uid="uid://d3x3w313wwf0f"]
 
 [ext_resource type="Script" uid="uid://dafkgj2637ylj" path="res://scripts/ui_router.gd" id="1_513t2"]
-[ext_resource type="Texture2D" uid="uid://bu360xtnrpj6p" path="res://art/icons/应援棒.png" id="1_fnul3"]
 [ext_resource type="PackedScene" path="res://scenes/card_stack_ui.tscn" id="3_p2d0v"]
 [ext_resource type="PackedScene" path="res://scenes/level_select_page.tscn" id="4_vna7j"]
 [ext_resource type="Script" uid="uid://w81mvbc8qhcc" path="res://scenes/feed_page.gd" id="5_feedpage"]
-[ext_resource type="Texture2D" uid="uid://cgrwqbhpvrcfm" path="res://art/ui/banner2.png" id="6_feed_banner"]
+[ext_resource type="Texture2D" path="res://art/mainui/mainbg.png" id="7_mainbg"]
 
-[node name="MainUI" type="Control" unique_id=2131106334]
+[node name="MainUI" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -16,27 +15,24 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_513t2")
 
-[node name="SafeArea" type="MarginContainer" parent="." unique_id=784720764]
+[node name="SafeArea" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_top = 0
-theme_override_constants/margin_right = 0
-theme_override_constants/margin_bottom = 0
 
-[node name="RootVBox" type="VBoxContainer" parent="SafeArea" unique_id=932619309]
+[node name="RootVBox" type="VBoxContainer" parent="SafeArea"]
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="TopBar" type="Control" parent="SafeArea/RootVBox" unique_id=864201640]
-custom_minimum_size = Vector2(0, 104)
+[node name="TopBar" type="Control" parent="SafeArea/RootVBox"]
+visible = false
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 
-[node name="TopBarBg" type="ColorRect" parent="SafeArea/RootVBox/TopBar" unique_id=1278666537]
+[node name="TopBarBg" type="ColorRect" parent="SafeArea/RootVBox/TopBar"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -45,66 +41,11 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.964706, 0.964706, 0.964706, 1)
 
-[node name="TopBarMargin" type="MarginContainer" parent="SafeArea/RootVBox/TopBar" unique_id=893452786]
-visible = false
-layout_mode = 0
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 6
-
-[node name="TopBarHBox" type="HBoxContainer" parent="SafeArea/RootVBox/TopBar/TopBarMargin" unique_id=488236880]
-layout_mode = 2
-alignment = 1
-
-[node name="LeftHolder" type="Control" parent="SafeArea/RootVBox/TopBar/TopBarMargin/TopBarHBox" unique_id=1677922920]
-layout_mode = 2
-
-[node name="TopSpacer" type="Control" parent="SafeArea/RootVBox/TopBar/TopBarMargin/TopBarHBox" unique_id=2012869548]
-custom_minimum_size = Vector2(14, 0)
-layout_mode = 2
-size_flags_horizontal = 0
-
-[node name="TitleLabe" type="Label" parent="SafeArea/RootVBox/TopBar" unique_id=592418708]
-layout_mode = 1
-anchors_preset = -1
-anchor_right = 1.0
-offset_top = 70.0
-offset_bottom = 98.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(0.0588235, 0.0588235, 0.0588235, 1)
-text = "MY pubble"
-horizontal_alignment = 1
-
-[node name="CheerGroup" type="HBoxContainer" parent="SafeArea/RootVBox/TopBar" unique_id=111721431]
-layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = 125.0
-offset_top = 68.0
-offset_right = 189.0
-offset_bottom = 100.0
-grow_horizontal = 2
-theme_override_constants/separation = 2
-
-[node name="CheerIcon" type="TextureRect" parent="SafeArea/RootVBox/TopBar/CheerGroup" unique_id=1075094435]
-custom_minimum_size = Vector2(24, 24)
-layout_mode = 2
-texture = ExtResource("1_fnul3")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="CheerValue" type="Label" parent="SafeArea/RootVBox/TopBar/CheerGroup" unique_id=1750051213]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.4, 0.4, 1)
-text = "10"
-
-[node name="ContentStack" type="Control" parent="SafeArea/RootVBox" unique_id=1440600453]
+[node name="ContentStack" type="Control" parent="SafeArea/RootVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="HomePage" type="Control" parent="SafeArea/RootVBox/ContentStack" unique_id=44649951]
+[node name="HomePage" type="Control" parent="SafeArea/RootVBox/ContentStack"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -112,16 +53,32 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HomeBg" type="ColorRect" parent="SafeArea/RootVBox/ContentStack/HomePage" unique_id=1433003593]
+[node name="MainBg" type="TextureRect" parent="SafeArea/RootVBox/ContentStack/HomePage"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.921569, 0.921569, 0.921569, 1)
+mouse_filter = 2
+texture = ExtResource("7_mainbg")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="HomeMargin" type="MarginContainer" parent="SafeArea/RootVBox/ContentStack/HomePage" unique_id=1840957400]
+[node name="BtnArtistFeed" type="Button" parent="SafeArea/RootVBox/ContentStack/HomePage"]
+layout_mode = 0
+offset_left = 985.0
+offset_top = 190.0
+offset_right = 1162.0
+offset_bottom = 246.0
+theme_override_colors/font_color = Color(0.12, 0.1, 0.16, 0.92)
+theme_override_colors/font_hover_color = Color(0.08, 0.06, 0.12, 1)
+theme_override_font_sizes/font_size = 22
+text = "艺人动态"
+flat = true
+
+[node name="HomeMargin" type="MarginContainer" parent="SafeArea/RootVBox/ContentStack/HomePage"]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -129,14 +86,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_bottom = 12
 
-[node name="CardStack" parent="SafeArea/RootVBox/ContentStack/HomePage/HomeMargin" unique_id=627801185 instance=ExtResource("3_p2d0v")]
+[node name="CardStack" parent="SafeArea/RootVBox/ContentStack/HomePage/HomeMargin" instance=ExtResource("3_p2d0v")]
 layout_mode = 2
 
-[node name="FeedPage" type="Control" parent="SafeArea/RootVBox/ContentStack" unique_id=557105155]
+[node name="FeedPage" type="Control" parent="SafeArea/RootVBox/ContentStack"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -145,76 +102,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("5_feedpage")
-recommend_banner_texture = ExtResource("6_feed_banner")
-banner_height = 128.0
-banner_margin_bottom = -10
 
-[node name="LevelSelectPage" parent="SafeArea/RootVBox/ContentStack" unique_id=398295018 instance=ExtResource("4_vna7j")]
-
-[node name="CodexPage" type="Control" parent="SafeArea/RootVBox/ContentStack" unique_id=482702769]
+[node name="LevelSelectPage" parent="SafeArea/RootVBox/ContentStack" instance=ExtResource("4_vna7j")]
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 
-[node name="CodexLabel" type="Label" parent="SafeArea/RootVBox/ContentStack/CodexPage" unique_id=1741260454]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-text = "图鉴页面"
-
-[node name="SettingsPage" type="Control" parent="SafeArea/RootVBox/ContentStack" unique_id=759898523]
+[node name="BottomNav" type="Control" parent="SafeArea/RootVBox"]
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="SettingsMargin" type="MarginContainer" parent="SafeArea/RootVBox/ContentStack/SettingsPage" unique_id=685406466]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
-
-[node name="SettingsVBox" type="VBoxContainer" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin" unique_id=433822416]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="MusicRow" type="HBoxContainer" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox" unique_id=280678512]
+custom_minimum_size = Vector2(0, 88)
 layout_mode = 2
 
-[node name="MusicLabel" type="Label" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox/MusicRow" unique_id=1366078508]
-layout_mode = 2
-text = "背景音乐"
-
-[node name="MusicToggle" type="CheckButton" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox/MusicRow" unique_id=1119529128]
-layout_mode = 2
-button_pressed = true
-
-[node name="SfxRow" type="HBoxContainer" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox" unique_id=518954270]
-layout_mode = 2
-
-[node name="SfxLabel" type="Label" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox/SfxRow" unique_id=456055131]
-layout_mode = 2
-text = "游戏音效"
-
-[node name="SfxToggle" type="CheckButton" parent="SafeArea/RootVBox/ContentStack/SettingsPage/SettingsMargin/SettingsVBox/SfxRow" unique_id=664215979]
-layout_mode = 2
-button_pressed = true
-
-[node name="BottomNav" type="Control" parent="SafeArea/RootVBox" unique_id=850296516]
-custom_minimum_size = Vector2(0, 104)
-layout_mode = 2
-
-[node name="NavBg" type="ColorRect" parent="SafeArea/RootVBox/BottomNav" unique_id=1492449503]
+[node name="NavBg" type="ColorRect" parent="SafeArea/RootVBox/BottomNav"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -223,7 +120,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.6, 0.49, 0.95, 1)
 
-[node name="NavMargin" type="MarginContainer" parent="SafeArea/RootVBox/BottomNav" unique_id=901820293]
+[node name="NavMargin" type="MarginContainer" parent="SafeArea/RootVBox/BottomNav"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -231,38 +128,27 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 12
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_bottom = 10
 
-[node name="NavHBox" type="HBoxContainer" parent="SafeArea/RootVBox/BottomNav/NavMargin" unique_id=1429228140]
+[node name="NavHBox" type="HBoxContainer" parent="SafeArea/RootVBox/BottomNav/NavMargin"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 64
+alignment = 1
 
-[node name="BtnHome" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox" unique_id=1721624564]
+[node name="BtnHome" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 0.95)
+theme_override_font_sizes/font_size = 20
 text = "主页"
 flat = true
 
-[node name="BtnFeed" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox" unique_id=549347879]
+[node name="BtnFeed" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox"]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
-size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 0.95)
+theme_override_font_sizes/font_size = 20
 text = "动态"
-flat = true
-
-[node name="BtnCodex" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox" unique_id=1656673325]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 0.95)
-text = "图鉴"
-flat = true
-
-[node name="BtnSettings" type="Button" parent="SafeArea/RootVBox/BottomNav/NavMargin/NavHBox" unique_id=1090187738]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 0.95)
-text = "设置"
 flat = true

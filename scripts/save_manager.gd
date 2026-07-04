@@ -21,6 +21,9 @@ var pending_post_level_nav: Dictionary = {}
 var feed_seen: Dictionary = {}
 var feed_pinned_post_id: String = ""
 
+## 标题页 → 主界面接力；瞬态，不写盘。"home" / "continue" / ""
+var boot_target: String = ""
+
 func _init() -> void:
 	load_progress()
 
@@ -58,8 +61,63 @@ func load_progress() -> void:
 		feed_seen = {}
 	feed_pinned_post_id = str(config.get_value("feed", "pinned_post_id", ""))
 
+func is_game_started() -> bool:
+	return _get_game_started()
+
+func mark_game_started() -> void:
+	_set_game_started(true)
+
+func can_continue() -> bool:
+	return _get_game_started()
+
+func reset_progress() -> void:
+	chapter_completed.clear()
+	chapter_unlocked.clear()
+	chapter_new_badge.clear()
+	level_unlocked.clear()
+	level_completed.clear()
+	level_hotspot_clicked.clear()
+	feed_seen.clear()
+	feed_pinned_post_id = ""
+	recent_opened_chapter_id = 0
+	recent_opened_level_id = ""
+	pending_post_level_nav.clear()
+	mark_chapter_unlocked(1, true)
+	chapter_new_badge["1"] = false
+	mark_level_unlocked("ch1_l01", true)
+	save_progress()
+	_set_game_started(true)
+
+func _get_game_started() -> bool:
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) != OK:
+		return false
+	return bool(config.get_value("player", "game_started", false))
+
+func _set_game_started(started: bool) -> void:
+	var config := ConfigFile.new()
+	config.load(SAVE_PATH)
+	config.set_value("player", "game_started", started)
+	config.save(SAVE_PATH)
+
+func is_chapter_available(chapter_id: int, chapter_manager: ChapterManager, condition_checker: ConditionChecker) -> bool:
+	if chapter_id <= 0:
+		return false
+	if is_chapter_unlocked(chapter_id):
+		return true
+	if chapter_manager == null or condition_checker == null:
+		return false
+	var chapter: Dictionary = chapter_manager.get_chapter_by_id(chapter_id)
+	if chapter.is_empty():
+		return false
+	var condition_id: int = int(chapter.get("condition_id", 0))
+	if condition_id <= 0:
+		return true
+	return condition_checker.is_condition_met(condition_id)
+
 func save_progress() -> void:
 	var config := ConfigFile.new()
+	config.load(SAVE_PATH)
 	config.set_value("player", "cheer_count", cheer_count)
 	config.set_value("player", "recent_opened_chapter_id", recent_opened_chapter_id)
 	config.set_value("player", "recent_opened_level_id", recent_opened_level_id)

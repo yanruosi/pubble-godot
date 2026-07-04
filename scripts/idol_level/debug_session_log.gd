@@ -1,26 +1,44 @@
 extends RefCounted
 class_name DebugSessionLog
 
-const SESSION_ID := "e48a0e"
-const LOG_NAME := "debug-e48a0e.log"
+const LOG_PATH := "res://debug-cabb3b.log"
+const DEBUG_LOG_PATH := "res://debug-9f0632.log"
+const DEBUG_SESSION_ID := "9f0632"
 
-static func write(location: String, message: String, hypothesis_id: String, data: Dictionary = {}, run_id: String = "pre-fix") -> void:
+static func write_debug(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
 	var payload := {
-		"sessionId": SESSION_ID,
+		"sessionId": DEBUG_SESSION_ID,
+		"hypothesisId": hypothesis_id,
 		"location": location,
 		"message": message,
 		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000,
-		"hypothesisId": hypothesis_id,
-		"runId": run_id
+		"timestamp": Time.get_unix_time_from_system() * 1000
 	}
-	var log_path: String = ProjectSettings.globalize_path("res://").path_join(LOG_NAME)
-	var exists: bool = FileAccess.file_exists(log_path)
-	var mode: int = FileAccess.READ_WRITE if exists else FileAccess.WRITE
-	var file := FileAccess.open(log_path, mode)
+	var line: String = JSON.stringify(payload) + "\n"
+	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
 	if file == null:
 		return
-	if exists:
-		file.seek_end()
-	file.store_line(JSON.stringify(payload))
+	file.seek_end()
+	file.store_string(line)
+	file.close()
+
+static func write(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
+	var payload := {
+		"sessionId": "cabb3b",
+		"hypothesisId": hypothesis_id,
+		"location": location,
+		"message": message,
+		"data": data,
+		"timestamp": Time.get_unix_time_from_system() * 1000
+	}
+	var line: String = JSON.stringify(payload) + "\n"
+	var file := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(LOG_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_string(line)
 	file.close()

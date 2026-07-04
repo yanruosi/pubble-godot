@@ -16,8 +16,8 @@ const BOUNCE_BACK_TIME := 0.18
 const MIN_FLING_VELOCITY := 30.0
 const TAP_MOVE_THRESHOLD := 6.0
 
-@export var art_base_width: float = 1536.0
-@export var art_base_height: float = 1024.0
+@export var art_base_width: float = 1280.0
+@export var art_base_height: float = 720.0
 
 var _scene_world: Control
 var _scene_scale: float = 1.0
@@ -25,6 +25,11 @@ var _scene_width: float = 0.0
 var _view_width: float = 0.0
 
 var _pan_x: float = 0.0
+## 进关默认横移：initial_pan_ratio 0=贴左 0.5=居中 1=贴右。
+## initial_pan_x>=0：设计稿上该 X 对准屏幕水平中心（如中心线量得 598 就填 598）。
+var _initial_pan_ratio: float = 0.5
+var _initial_pan_x_design: float = -1.0
+var _use_initial_pan_x: bool = false
 var _velocity: float = 0.0
 var _dragging: bool = false
 var _drag_start_pan: float = 0.0
@@ -37,7 +42,7 @@ var _tracking_pointer := false
 var _pan_gesture_active := false
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(_on_resized)
 	get_viewport().size_changed.connect(_on_viewport_size_changed)
 	_scene_world = get_node_or_null("SceneWorld") as Control
@@ -48,10 +53,23 @@ func set_art_base(width: float, height: float) -> void:
 	art_base_height = maxf(1.0, height)
 	_recalc_layout(true)
 
+func set_initial_pan(ratio: float = 0.5, pan_x_design: float = -1.0, use_pan_x_design: bool = false) -> void:
+	_initial_pan_ratio = clampf(ratio, 0.0, 1.0)
+	_initial_pan_x_design = pan_x_design
+	_use_initial_pan_x = use_pan_x_design
+
 func reset_pan_to_center() -> void:
-	_pan_x = max(0.0, (_scene_width - _view_width) * 0.5)
+	_pan_x = _resolve_initial_pan_x()
 	_velocity = 0.0
 	_apply_world_position()
+
+func _resolve_initial_pan_x() -> float:
+	var max_pan: float = max(0.0, _scene_width - _view_width)
+	if _use_initial_pan_x:
+		# 设计稿像素 X 落在屏幕水平中心：pan = X*scale - 视口宽/2
+		var target: float = _initial_pan_x_design * _scene_scale - _view_width * 0.5
+		return clampf(target, 0.0, max_pan)
+	return max_pan * _initial_pan_ratio
 
 func set_pan_locked(locked: bool) -> void:
 	_pan_locked = locked
@@ -149,6 +167,11 @@ func _input(event: InputEvent) -> void:
 			_tracking_pointer = false
 			_pan_gesture_active = false
 			if was_pan_gesture:
+				#region agent log
+				_pan_debug_log("H3", "scene_pan_controller.gd:_input", "mouse_handled_by_pan", {
+					"click_pos": [mb.position.x, mb.position.y]
+				})
+				#endregion
 				get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and _tracking_pointer and _dragging:
@@ -194,7 +217,6 @@ func _gui_input(event: InputEvent) -> void:
 			_begin_drag(mb.position)
 		else:
 			_end_drag()
-		accept_event()
 		return
 	if event is InputEventScreenTouch:
 		var st := event as InputEventScreenTouch
@@ -202,17 +224,30 @@ func _gui_input(event: InputEvent) -> void:
 			_begin_drag(st.position)
 		else:
 			_end_drag()
-		accept_event()
 		return
 	if event is InputEventMouseMotion and _dragging:
 		var mm := event as InputEventMouseMotion
 		_apply_drag_motion(mm.position, mm.relative.x)
-		accept_event()
+		if _pan_gesture_active:
+			#region agent log
+			DebugSessionLog.write_debug("H15", "scene_pan_controller.gd:_gui_input", "consume_mouse_pan", {
+				"drag_total_dx": _drag_total_dx,
+				"drag_total_dy": _drag_total_dy
+			})
+			#endregion
+			accept_event()
 		return
 	if event is InputEventScreenDrag and _dragging:
 		var sd := event as InputEventScreenDrag
 		_apply_drag_motion(sd.position, sd.relative.x)
-		accept_event()
+		if _pan_gesture_active:
+			#region agent log
+			DebugSessionLog.write_debug("H15", "scene_pan_controller.gd:_gui_input", "consume_touch_pan", {
+				"drag_total_dx": _drag_total_dx,
+				"drag_total_dy": _drag_total_dy
+			})
+			#endregion
+			accept_event()
 
 func _begin_drag(local_pos: Vector2) -> void:
 	_dragging = true
@@ -293,3 +328,26 @@ func _apply_world_position() -> void:
 		return
 	_scene_world.position = Vector2(-roundf(_pan_x), 0.0)
 	pan_changed.emit(_pan_x, _scene_world.size)
+
+#region agent log
+const PAN_DEBUG_LOG_PATH := "res://debug-0ae22b.log"
+const PAN_DEBUG_SESSION_ID := "0ae22b"
+
+func _pan_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
+	var payload := {
+		"sessionId": PAN_DEBUG_SESSION_ID,
+		"hypothesisId": hypothesis_id,
+		"location": location,
+		"message": message,
+		"data": data,
+		"timestamp": Time.get_unix_time_from_system() * 1000
+	}
+	var file := FileAccess.open(PAN_DEBUG_LOG_PATH, FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open(PAN_DEBUG_LOG_PATH, FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_string(JSON.stringify(payload) + "\n")
+	file.close()
+#endregion
