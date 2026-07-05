@@ -26,11 +26,11 @@ convert_tables.py 会按各表 skip_meta_rows 自动跳过说明行；conditions
 - 已废弃：寻物时代的 props.csv / level_props.csv 不再转表。
 
 【单关配表目录 data_src/levels/{level_id}/】
-每关四表，转表后输出到 data/levels/{level_id}/：
-- level.csv -> level.json（通常 1 条：真相、槽位开关、required_slot、场景底图与坐标基准）
-- vocab.csv -> vocab.json（可拖入词条库）
-- hotspots.csv -> hotspots.json（parent_id 树；type: normal/collect/modal/panel）
-- slots.csv -> slots.json（slot_type: scroll / identity / mapping；卷轴用 prefix_text/suffix_text）
+每关四表（xlsx 中文文件名），转表后输出到 data/levels/{level_id}/：
+- 关卡配置表.xlsx -> level.json（通常 1 条：真相、槽位开关、required_slot、场景底图与坐标基准）
+- 词条表.xlsx -> vocab.json（可拖入词条库）
+- 热点表.xlsx -> hotspots.json（parent_id 树；type: normal/collect/modal/panel）
+- 槽位表.xlsx -> slots.json（slot_type: scroll / identity / mapping；卷轴用 prefix_text/suffix_text）
 
 热点坐标：按 level.art_base_width × art_base_height 设计稿像素（默认 1920×1080），运行时缩放至视口。
 

@@ -49,7 +49,7 @@ func _is_chapter_level_order_unlocked(chapter_id: int, target_order: int) -> boo
 		var level: Dictionary = item as Dictionary
 		if int(level.get("order", 0)) != target_order:
 			continue
-		var level_id: String = str(level.get("level_id", ""))
+		var level_id: String = str(level.get("levelid", ""))
 		if level_id.is_empty():
 			return false
 		return _save_manager.is_level_unlocked(level_id) or _save_manager.is_level_completed(level_id)
@@ -89,7 +89,7 @@ func _find_previous_level_id(current_order: int, chapter_levels: Array) -> Strin
 		if order >= current_order or order <= best_order:
 			continue
 		best_order = order
-		best_level_id = str(level.get("level_id", ""))
+		best_level_id = str(level.get("levelid", ""))
 	return best_level_id
 
 func get_fail_text(condition_id: int) -> String:

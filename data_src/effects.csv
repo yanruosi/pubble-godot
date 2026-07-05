@@ -1,5 +1,0 @@
-effect_id,resource_path,editor_note
-string,string,string
-特效配置ID（关卡热点/互动可引用）,特效场景或粒子资源路径（res://…/*.tscn 等）,备注（不进游戏逻辑）
-fx_found_ping,res://fx/found_ping.tscn,找到目标时的轻量提示（占位路径）
-heart_point,res://fx/found_ping.tscn,爱心点击

@@ -433,7 +433,7 @@ func _current_level_id(save_manager: SaveManager, chapter_manager: ChapterManage
 		if not (item is Dictionary):
 			continue
 		var level: Dictionary = item as Dictionary
-		var level_id: String = str(level.get("level_id", ""))
+		var level_id: String = str(level.get("levelid", ""))
 		if not _is_level_playable(level, 1, chapter_manager.get_levels_for_chapter(1), save_manager, chapter_manager):
 			continue
 		var order: int = int(level.get("order", 0))
@@ -457,10 +457,10 @@ func _is_level_playable(
 ) -> bool:
 	if level.is_empty():
 		return false
-	var level_id: String = str(level.get("level_id", ""))
+	var level_id: String = str(level.get("levelid", ""))
 	if save_manager.is_level_unlocked(level_id) or save_manager.is_level_completed(level_id):
 		return true
-	var condition_id: int = int(level.get("unlock_condition_id", 0))
+	var condition_id: int = int(level.get("unlockconditionid", 0))
 	if condition_id <= 0:
 		return true
 	var condition_checker: ConditionChecker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker

@@ -457,7 +457,7 @@ func _mark_chapter_completed_if_all_done() -> void:
 	for item in chapter_levels:
 		if not (item is Dictionary):
 			continue
-		var lid: String = str((item as Dictionary).get("level_id", ""))
+		var lid: String = str((item as Dictionary).get("levelid", ""))
 		if lid.is_empty() or not _save_manager.is_level_completed(lid):
 			return
 	_save_manager.mark_chapter_completed(chapter_id, true)

@@ -43,7 +43,7 @@ func _load_json_data() -> void:
 			if item is Dictionary:
 				var item_dict: Dictionary = item
 				var level: Dictionary = item_dict.duplicate(true)
-				var level_id: String = str(level.get("level_id", ""))
+				var level_id: String = str(level.get("levelid", ""))
 				var chapter_id: int = int(level.get("chapter_id", 0))
 				if level_id.is_empty() or chapter_id <= 0:
 					continue

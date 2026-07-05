@@ -1,0 +1,12 @@
+[
+  {
+    "tierlowmax": 50,
+    "tiermidmax": 80,
+    "tierhighmin": 80,
+    "pauseat": 0,
+    "resumeat": 10,
+    "capat": 100,
+    "capresetto": 50,
+    "capinfluxcount": 3
+  }
+]

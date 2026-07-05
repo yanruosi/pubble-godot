@@ -437,7 +437,7 @@ func focus_level_by_id(level_id: String) -> void:
 	if level_id.is_empty() or _levels.is_empty():
 		return
 	for i in range(_levels.size()):
-		if str(_levels[i].get("level_id", "")) == level_id:
+		if str(_levels[i].get("levelid", "")) == level_id:
 			#region agent log
 			var snap_focus := _carousel_layout_snapshot()
 			snap_focus["focus_level_id"] = level_id
@@ -572,7 +572,7 @@ func _start_current_level() -> void:
 		return
 	var level: Dictionary = _current_level().duplicate(true)
 	if _save_manager != null:
-		_save_manager.set_recent_opened_level_id(str(level.get("level_id", "")))
+		_save_manager.set_recent_opened_level_id(str(level.get("levelid", "")))
 	level_start_requested.emit(level)
 
 
@@ -609,13 +609,13 @@ func _is_level_unlocked_for_dict(level: Dictionary) -> bool:
 			"level_select_page.gd:_is_level_unlocked_for_dict",
 			"locked because chapter is not unlocked",
 			{
-				"level_id": str(level.get("level_id", "")),
+				"level_id": str(level.get("levelid", "")),
 				"chapter_id": _chapter_id
 			}
 		)
 		#endregion
 		return false
-	var level_id: String = str(level.get("level_id", ""))
+	var level_id: String = str(level.get("levelid", ""))
 	if _save_manager != null:
 		if _save_manager.is_level_unlocked(level_id) or _save_manager.is_level_completed(level_id):
 			#region agent log
@@ -631,7 +631,7 @@ func _is_level_unlocked_for_dict(level: Dictionary) -> bool:
 			)
 			#endregion
 			return true
-	var condition_id: int = int(level.get("unlock_condition_id", 0))
+	var condition_id: int = int(level.get("unlockconditionid", 0))
 	if condition_id <= 0:
 		#region agent log
 		_dbg8(
@@ -680,7 +680,7 @@ func _is_current_level_unlocked() -> bool:
 
 
 func _show_level_locked_prompt(level: Dictionary, for_center_card: bool = false) -> void:
-	var condition_id: int = int(level.get("unlock_condition_id", 0))
+	var condition_id: int = int(level.get("unlockconditionid", 0))
 	var text: String = ""
 	if not _is_chapter_unlocked() and _condition_checker != null:
 		text = _condition_checker.get_fail_text(int(_chapter.get("condition_id", 0)))
@@ -694,7 +694,7 @@ func _show_level_locked_prompt(level: Dictionary, for_center_card: bool = false)
 		"level_select_page.gd:_show_level_locked_prompt",
 		"show locked bubble",
 		{
-			"level_id": str(level.get("level_id", "")),
+			"level_id": str(level.get("levelid", "")),
 			"for_center_card": for_center_card,
 			"condition_id": condition_id,
 			"text": text
@@ -778,7 +778,7 @@ func _on_center_card_gui_input(event: InputEvent) -> void:
 				"level_select_page.gd:_on_center_card_gui_input",
 				"center card clicked",
 				{
-					"level_id": str(_current_level().get("level_id", "")),
+					"level_id": str(_current_level().get("levelid", "")),
 					"is_unlocked": _is_current_level_unlocked()
 				}
 			)
@@ -799,7 +799,7 @@ func _on_center_card_gui_input(event: InputEvent) -> void:
 				"level_select_page.gd:_on_center_card_gui_input",
 				"center card tapped (touch)",
 				{
-					"level_id": str(_current_level().get("level_id", "")),
+					"level_id": str(_current_level().get("levelid", "")),
 					"is_unlocked": _is_current_level_unlocked()
 				}
 			)

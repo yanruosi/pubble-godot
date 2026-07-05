@@ -25,14 +25,16 @@ import pandas as pd
 # 项目目录（本脚本所在目录）
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(SCRIPT_DIR, "data_src")
+GLOBAL_XLSX_DIR = os.path.join(SRC_DIR, "xlsx表")
 OUT_DIR = os.path.join(SCRIPT_DIR, "data")
 
 # 表基名（不含扩展名） -> 输出 json 文件名、跳过的「表头后说明行」数量（见 data_src/00_表头约定.txt）
+# src：xlsx表/ 下的中文文件名（不含扩展名）；转表时读中文名，输出仍用 base 对应英文 json
 # skip_meta_rows：除第 1 行英文字段名外，再跳过后续几行（类型行+中文说明行=2）
 TABLES = [
-    # chapters：删列/缺列后果见 data_src/00_表头约定.txt「chapters 字段」；导出时 _validate_chapters_records 会告警。
     {
         "base": "chapters",
+        "src": "章节表",
         "out": "chapters.json",
         "skip_meta_rows": 2,
         "int_cols": ["id", "order", "icon_id", "condition_id"],
@@ -40,6 +42,7 @@ TABLES = [
     },
     {
         "base": "conditions",
+        "src": "条件表",
         "out": "conditions.json",
         "skip_meta_rows": 2,
         "int_cols": ["id", "type", "param"],
@@ -49,19 +52,25 @@ TABLES = [
     },
     {
         "base": "levels",
+        "src": "关卡表",
         "out": "levels.json",
         "skip_meta_rows": 2,
         "int_cols": [
             "chapter_id",
             "order",
             "cheer_reward",
-            "unlock_condition_id",
+            "unlockconditionid",
             "codex_unlock_id",
+            "grantstars",
+            "grantfp",
+            "grantintel",
+            "unlockpostcount",
         ],
         "float_cols": [],
     },
     {
         "base": "bgm",
+        "src": "背景音乐表",
         "out": "bgm.json",
         "skip_meta_rows": 2,
         "int_cols": ["loop"],
@@ -69,6 +78,7 @@ TABLES = [
     },
     {
         "base": "effects",
+        "src": "特效表",
         "out": "effects.json",
         "skip_meta_rows": 2,
         "int_cols": [],
@@ -76,12 +86,171 @@ TABLES = [
     },
     {
         "base": "feed_posts",
+        "src": "艺人帖表",
         "out": "feed_posts.json",
         "skip_meta_rows": 2,
         "int_cols": ["type", "condition_id"],
         "float_cols": [],
     },
+    {
+        "base": "items",
+        "src": "道具表",
+        "out": "items.json",
+        "skip_meta_rows": 2,
+        "int_cols": ["itemid", "category", "stacklimit", "tradable"],
+        "float_cols": [],
+    },
+    {
+        "base": "post_templates",
+        "src": "投稿模板表",
+        "out": "post_templates.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "posttype",
+            "tabtype",
+            "conditionid",
+            "weightlow",
+            "weightmid",
+            "weighthigh",
+            "durationsec",
+            "maxparallel",
+            "grantfp",
+            "grantintel",
+            "grantstars",
+            "opiniondelta",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "activities",
+        "src": "活动表",
+        "out": "activities.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "category",
+            "conditionid",
+            "costfp",
+            "costitemid",
+            "costitemcount",
+            "outputposttype1",
+            "outputposttype2",
+            "drawcount",
+            "refreshmarket",
+            "tutorialonly",
+            "sort",
+            "stexplow",
+            "stexpmid",
+            "stexphigh",
+            "opinionlock",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "fan_levels",
+        "src": "会员等级表",
+        "out": "fan_levels.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "level",
+            "costitemcategory",
+            "costitemcount",
+            "unlockconditionid",
+        ],
+        "float_cols": ["shopdiscount"],
+    },
+    {
+        "base": "intel_levels",
+        "src": "情报等级表",
+        "out": "intel_levels.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "level",
+            "thresholdintel",
+            "unlockconditionid",
+            "grantfp",
+            "grantstars",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "station_levels",
+        "src": "站子等级表",
+        "out": "station_levels.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "level",
+            "thresholdexp",
+            "rewarditemid",
+            "rewarditemcount",
+            "idolkara",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "shop_offers",
+        "src": "商城上架表",
+        "out": "shop_offers.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "currencytype",
+            "price",
+            "itemid",
+            "conditionid",
+            "stocklimit",
+            "shoptab",
+            "tutorialonly",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "hotsearch_pool",
+        "src": "热搜文本池表",
+        "out": "hotsearch_pool.json",
+        "skip_meta_rows": 2,
+        "int_cols": ["opiniontier", "weight"],
+        "float_cols": [],
+    },
+    {
+        "base": "market_catalog",
+        "src": "中转站目录表",
+        "out": "market_catalog.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "itemid",
+            "tradetype",
+            "pricelow",
+            "pricemid",
+            "pricehigh",
+            "conditionid",
+            "refreshonactivity",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "opinion_config",
+        "src": "舆论配置表",
+        "out": "opinion_config.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "tierlowmax",
+            "tiermidmax",
+            "tierhighmin",
+            "pauseat",
+            "resumeat",
+            "capat",
+            "capresetto",
+            "capinfluxcount",
+        ],
+        "float_cols": [],
+    },
 ]
+
+# 中文/英文文件名 -> TABLES 条目（供拖入单文件转表时使用）
+TABLE_BY_STEM: dict[str, dict[str, Any]] = {}
+for _entry in TABLES:
+    TABLE_BY_STEM[_entry["base"]] = _entry
+    if _entry.get("src"):
+        TABLE_BY_STEM[_entry["src"]] = _entry
 
 # 单关配表：data_src/levels/{level_id}/*.csv -> data/levels/{level_id}/*.json
 LEVELS_PACK_SRC = os.path.join(SRC_DIR, "levels")
@@ -90,6 +259,7 @@ LEVELS_PACK_OUT = os.path.join(OUT_DIR, "levels")
 LEVEL_PACK_TABLES = [
     {
         "base": "level",
+        "src": "关卡配置表",
         "out": "level.json",
         "skip_meta_rows": 2,
         "int_cols": [
@@ -108,6 +278,7 @@ LEVEL_PACK_TABLES = [
     },
     {
         "base": "vocab",
+        "src": "词条表",
         "out": "vocab.json",
         "skip_meta_rows": 2,
         "int_cols": [],
@@ -116,6 +287,7 @@ LEVEL_PACK_TABLES = [
     },
     {
         "base": "hotspots",
+        "src": "热点表",
         "out": "hotspots.json",
         "skip_meta_rows": 2,
         "int_cols": [
@@ -135,6 +307,7 @@ LEVEL_PACK_TABLES = [
     },
     {
         "base": "slots",
+        "src": "槽位表",
         "out": "slots.json",
         "skip_meta_rows": 2,
         "int_cols": ["order", "required"],
@@ -345,20 +518,57 @@ def _validate_chapters_records(records: list[dict[str, Any]]) -> None:
             )
 
 
-def _find_source_file(base: str, directory: str) -> str | None:
-    # 同基名多格式并存时：优先用 .csv（策划最常改）；否则取最近修改的那个
+def _source_stems(entry: dict[str, Any]) -> list[str]:
+    """优先中文文件名，再回退英文 base。"""
+    stems: list[str] = []
+    src = entry.get("src")
+    if src:
+        stems.append(str(src))
+    stems.append(entry["base"])
+    return stems
+
+
+def _find_source_file_for_entry(entry: dict[str, Any], directory: str) -> str | None:
+    # 全局表优先 data_src/xlsx表/；单关配表仍用传入 directory
+    search_dirs = [directory]
+    if directory == SRC_DIR and os.path.isdir(GLOBAL_XLSX_DIR):
+        search_dirs = [GLOBAL_XLSX_DIR, SRC_DIR]
     exts = [".csv", ".xlsx", ".xlsm", ".xls"]
-    paths: list[str] = []
-    for ext in exts:
-        p = os.path.join(directory, base + ext)
-        if os.path.isfile(p):
-            paths.append(p)
-    if not paths:
-        return None
-    csv_path = os.path.join(directory, base + ".csv")
-    if csv_path in paths:
-        return csv_path
-    return max(paths, key=lambda p: os.path.getmtime(p))
+    for search_dir in search_dirs:
+        for stem in _source_stems(entry):
+            paths: list[str] = []
+            for ext in exts:
+                p = os.path.join(search_dir, stem + ext)
+                if os.path.isfile(p):
+                    paths.append(p)
+            if not paths:
+                continue
+            csv_path = os.path.join(search_dir, stem + ".csv")
+            if csv_path in paths:
+                return csv_path
+            return max(paths, key=lambda p: os.path.getmtime(p))
+    return None
+
+
+def _find_source_file(base: str, directory: str) -> str | None:
+    entry = TABLE_BY_STEM.get(base)
+    if entry is not None:
+        return _find_source_file_for_entry(entry, directory)
+    exts = [".csv", ".xlsx", ".xlsm", ".xls"]
+    for search_dir in ([directory] if directory != SRC_DIR or not os.path.isdir(GLOBAL_XLSX_DIR)
+                       else [GLOBAL_XLSX_DIR, SRC_DIR]):
+        paths: list[str] = []
+        for ext in exts:
+            p = os.path.join(search_dir, base + ext)
+            if os.path.isfile(p):
+                paths.append(p)
+        if not paths:
+            continue
+        csv_path = os.path.join(search_dir, base + ".csv")
+        if csv_path in paths:
+            return csv_path
+        return max(paths, key=lambda p: os.path.getmtime(p))
+    return None
 
 
 def _ensure_dirs() -> None:
@@ -390,9 +600,10 @@ def convert_level_packs() -> tuple[int, int]:
         for entry in LEVEL_PACK_TABLES:
             total += 1
             out_path = os.path.join(pack_out, entry["out"])
-            path = _find_source_file(entry["base"], pack_src)
+            path = _find_source_file_for_entry(entry, pack_src)
             if not path:
-                print(f"[跳过] {pack_id}/{entry['base']}.(csv|xlsx|xls) 不存在")
+                names = " / ".join(_source_stems(entry))
+                print(f"[跳过] {pack_id}/{names}.(csv|xlsx|xls) 不存在")
                 continue
             try:
                 df = _load_dataframe(path, int(entry.get("skip_meta_rows", 0)))
@@ -426,9 +637,10 @@ def convert_one_entry(entry: dict[str, Any], src_path: str | None = None) -> boo
     if export_cols is not None and len(export_cols) == 0:
         export_cols = None
 
-    path = src_path or _find_source_file(base, SRC_DIR)
+    path = src_path or _find_source_file_for_entry(entry, SRC_DIR)
     if not path:
-        print(f"[跳过] 未找到表文件: {base}.(csv|xlsx|xls) 于 {SRC_DIR}")
+        names = " / ".join(_source_stems(entry))
+        print(f"[跳过] 未找到表文件: {names}.(csv|xlsx|xls) 于 {GLOBAL_XLSX_DIR} 或 {SRC_DIR}")
         return False
 
     try:
@@ -456,7 +668,7 @@ def convert_path(arg_path: str) -> bool:
         return False
 
     stem = os.path.splitext(os.path.basename(path))[0]
-    entry = next((t for t in TABLES if t["base"] == stem), None)
+    entry = TABLE_BY_STEM.get(stem)
     if entry is None:
         skip = _guess_skip_meta_rows(path)
         entry = {

@@ -58,29 +58,5 @@
     "avatar_path": "res://art/post/artist1.png",
     "image_path": "res://art/post/artist101.png",
     "image_path2": ""
-  },
-  {
-    "post_id": "fanspost1",
-    "type": 902,
-    "condition_id": 4001,
-    "level_id": "",
-    "name": "momo",
-    "time": "02.14.2026",
-    "text": "期待期待！冲啊！Brave第一个出个人单曲的含金量！！",
-    "avatar_path": "res://art/post/artist1.png",
-    "image_path": "",
-    "image_path2": ""
-  },
-  {
-    "post_id": "fanspost2",
-    "type": 902,
-    "condition_id": 4001,
-    "level_id": "",
-    "name": "momo",
-    "time": "02.14.2026",
-    "text": "期待晚上的情人节和老公见面！Leo我爱你！",
-    "avatar_path": "res://art/post/artist1.png",
-    "image_path": "",
-    "image_path2": ""
   }
 ]

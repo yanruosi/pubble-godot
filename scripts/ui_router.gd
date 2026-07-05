@@ -134,7 +134,7 @@ func _apply_boot_entry() -> void:
 
 
 func _on_feed_open_level(level: Dictionary) -> void:
-	var level_id: String = str(level.get("level_id", ""))
+	var level_id: String = str(level.get("levelid", ""))
 	if save_manager != null:
 		save_manager.set_recent_opened_level_id(level_id)
 		save_manager.set_recent_opened_chapter_id(int(level.get("chapter_id", 0)))
@@ -142,7 +142,7 @@ func _on_feed_open_level(level: Dictionary) -> void:
 
 
 func _on_level_start_requested(level: Dictionary) -> void:
-	var level_id: String = str(level.get("level_id", ""))
+	var level_id: String = str(level.get("levelid", ""))
 	var scene_path: String = str(level.get("scene_path", ""))
 	if scene_path.is_empty():
 		push_warning("关卡 %s 没有 scene_path" % level_id)
