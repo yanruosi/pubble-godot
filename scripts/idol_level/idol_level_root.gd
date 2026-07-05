@@ -30,7 +30,11 @@ var _placeholder_label: Label
 var _truth_layer: CanvasLayer
 var _truth_text_label: Label
 var _truth_reward_label: Label
+var _truth_dismiss_btn: Button
+var _truth_is_review_mode := false
 var _menu_layer: CanvasLayer
+var _force_fresh_restart := false
+var _is_replay_session := false
 
 func _ready() -> void:
 	_chapter_manager = get_node_or_null("/root/ChapterManagerSingleton") as ChapterManager
@@ -47,6 +51,10 @@ func _ready() -> void:
 	add_child(_vocab_bank)
 	_connect_children()
 	_load_level()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_flush_level_progress()
 
 func _connect_children() -> void:
 	hotspot_layer.set_popup_panel(popup_layer)
@@ -68,6 +76,11 @@ func _connect_children() -> void:
 	_vocab_bank.changed.connect(_on_vocab_changed)
 
 func _load_level() -> void:
+	if _truth_layer != null:
+		_truth_layer.visible = false
+	var skip_restore: bool = _force_fresh_restart
+	_force_fresh_restart = false
+
 	var loader := LevelPackLoader.new()
 	_pack = loader.load_pack(level_id, _chapter_manager)
 	_level_config = _pack.get("level", {})
@@ -85,6 +98,8 @@ func _load_level() -> void:
 	_apply_title()
 	_vocab_bank.setup(_pack.get("vocab", []), int(_level_config.get("vocab_total", 0)))
 	bottom_bar.setup(_vocab_bank.total_count())
+	if int(_level_config.get("slot3_enabled", 1)) == 0:
+		bottom_bar.set_slot_hidden("slot3", true)
 	hotspot_layer.setup(_pack.get("hotspots", []), _level_config, level_id, _save_manager)
 	_sync_scene_view_to_hotspots()
 	scroll_panel.setup(_pack.get("slots", []), _vocab_bank)
@@ -93,6 +108,110 @@ func _load_level() -> void:
 	_sync_slot_unlock_events()
 	popup_layer.hide_all()
 	_sync_hotspot_layer_visibility()
+
+	if _save_manager != null:
+		_save_manager.set_recent_opened_level_id(level_id)
+		var chapter_id: int = int(_level_row.get("chapter_id", 0))
+		if chapter_id > 0:
+			_save_manager.set_recent_opened_chapter_id(chapter_id)
+
+	if not skip_restore:
+		_restore_level_progress()
+
+	var is_completed: bool = _save_manager != null and _save_manager.is_level_completed(level_id)
+	if is_completed and not skip_restore:
+		call_deferred("_enter_completed_review_mode")
+
+func _build_level_progress_patch() -> Dictionary:
+	var unlock_events: Array = []
+	for key in _slot2_unlock_events.keys():
+		if bool(_slot2_unlock_events[key]):
+			unlock_events.append(str(key))
+	for key in _slot3_unlock_events.keys():
+		var event_id: String = str(key)
+		if bool(_slot3_unlock_events[key]) and not unlock_events.has(event_id):
+			unlock_events.append(event_id)
+
+	var collected: Array = []
+	for vocab in _vocab_bank.get_collected_vocab():
+		var vocab_id: String = str(vocab.get("vocab_id", ""))
+		if not vocab_id.is_empty():
+			collected.append(vocab_id)
+
+	var slots_completed: Dictionary = {}
+	for slot_id in ["slot1", "slot2", "slot3"]:
+		if bottom_bar.is_slot_completed(slot_id):
+			slots_completed[slot_id] = true
+
+	var patch: Dictionary = {
+		"collected_vocab": collected,
+		"unlock_events": unlock_events,
+		"scroll_fills": scroll_panel.get_fills(),
+		"identity_fills": identity_panel.get_fills(),
+		"slots_completed": slots_completed,
+		"hotspot_used": hotspot_layer.get_used_hotspot_ids(),
+	}
+	if _is_replay_session and _save_manager != null and _save_manager.is_level_completed(level_id):
+		var existing: Dictionary = _save_manager.get_level_progress(level_id)
+		patch["scroll_fills"] = existing.get("scroll_fills", {})
+		patch["identity_fills"] = existing.get("identity_fills", {})
+		patch["slots_completed"] = existing.get("slots_completed", {})
+	return patch
+
+func _flush_level_progress() -> void:
+	if _save_manager == null or level_id.is_empty():
+		return
+	_save_manager.set_level_progress(level_id, _build_level_progress_patch())
+	_save_manager.save_progress()
+
+func _restore_level_progress() -> void:
+	if _save_manager == null or level_id.is_empty():
+		return
+	var progress: Dictionary = _save_manager.get_level_progress(level_id)
+	if progress.is_empty():
+		return
+
+	var collected_raw: Variant = progress.get("collected_vocab", [])
+	if collected_raw is Array:
+		_vocab_bank.restore_collected(collected_raw)
+
+	var events_raw: Variant = progress.get("unlock_events", [])
+	if events_raw is Array:
+		for item in events_raw:
+			var event_id: String = str(item)
+			if event_id.is_empty():
+				continue
+			_slot2_unlock_events[event_id] = true
+			_slot3_unlock_events[event_id] = true
+		_evaluate_slot2_unlock()
+		_evaluate_slot3_unlock()
+		_sync_slot_unlock_events()
+
+	var used_raw: Variant = progress.get("hotspot_used", [])
+	if used_raw is Array:
+		hotspot_layer.restore_used_hotspots(used_raw)
+
+	var scroll_fills_raw: Variant = progress.get("scroll_fills", {})
+	if scroll_fills_raw is Dictionary and not (scroll_fills_raw as Dictionary).is_empty():
+		scroll_panel.restore_fills(scroll_fills_raw)
+
+	var identity_fills_raw: Variant = progress.get("identity_fills", {})
+	if identity_fills_raw is Dictionary and not (identity_fills_raw as Dictionary).is_empty():
+		identity_panel.restore_fills(identity_fills_raw)
+
+	var slots_completed_raw: Variant = progress.get("slots_completed", {})
+	if slots_completed_raw is Dictionary:
+		for slot_key in (slots_completed_raw as Dictionary).keys():
+			if bool((slots_completed_raw as Dictionary)[slot_key]):
+				bottom_bar.set_slot_completed(str(slot_key), true)
+
+func _enter_completed_review_mode() -> void:
+	_completion_applied = true
+	_first_clear_this_finish = false
+	bottom_bar.set_slot_completed("slot1", true)
+	if not identity_panel.get_fills().is_empty():
+		bottom_bar.set_slot_completed("slot2", true)
+	_show_truth_overlay(true)
 
 func _apply_background() -> void:
 	bg_solid.color = Color(0.035, 0.04, 0.045, 1)
@@ -182,7 +301,17 @@ func _on_hotspot_popup_requested(text: String, hotspot: Dictionary) -> void:
 
 func _on_hotspot_modal_opened(modal_id: String, title: String, asset_path: String, popup_layout: String, hotspot: Dictionary) -> void:
 	var design_size: Vector2 = HotspotLayer.coord_base_from_row(hotspot)
-	popup_layer.show_modal(modal_id, title, asset_path, popup_layout, design_size)
+	var design_anchor: Vector2 = HotspotLayer.anchor_from_row(hotspot)
+	#region agent log
+	DebugSessionLog.write_debug("P2", "idol_level_root.gd:_on_hotspot_modal_opened", "modal_open_params", {
+		"hotspot_id": str(hotspot.get("hotspot_id", "")),
+		"modal_id": modal_id,
+		"design_size": [design_size.x, design_size.y],
+		"design_anchor": [design_anchor.x, design_anchor.y],
+		"editor_note": str(hotspot.get("editor_note", ""))
+	})
+	#endregion
+	popup_layer.show_modal(modal_id, title, asset_path, popup_layout, design_size, design_anchor)
 	scene_pan.set_pan_locked(true)
 
 func _on_hotspot_modal_close_requested(_hotspot: Dictionary) -> void:
@@ -204,9 +333,15 @@ func _on_hotspot_vocab_requested(vocab_id: String, hotspot: Dictionary) -> void:
 			bubble_text = "此线索已加入思考面板。"
 		else:
 			bubble_text = "已收录词条：%s" % str(vocab.get("text", vocab_id))
+		_stage_level_progress()
 	else:
 		bubble_text = "已收录过：%s" % str(vocab.get("text", vocab_id))
 	popup_layer.show_bubble(bubble_text, in_sub_layer)
+
+func _stage_level_progress() -> void:
+	if _save_manager == null or level_id.is_empty():
+		return
+	_save_manager.set_level_progress(level_id, _build_level_progress_patch())
 
 func _on_popup_bubble_dismissed(should_restore_layer: bool) -> void:
 	if not should_restore_layer:
@@ -226,6 +361,7 @@ func _on_hotspot_event_emitted(event_id: String, _hotspot: Dictionary) -> void:
 	_evaluate_slot2_unlock()
 	_evaluate_slot3_unlock()
 	_sync_slot_unlock_events()
+	_stage_level_progress()
 
 func _resolve_bubble_text(text: String, hotspot: Dictionary) -> String:
 	var hint_vocab_id: String = str(hotspot.get("hint_vocab", ""))
@@ -240,6 +376,18 @@ func _resolve_bubble_text(text: String, hotspot: Dictionary) -> String:
 	return str(vocab_row.get("text", text))
 
 func _on_popup_closed(closed_modal_id: String) -> void:
+	#region agent log
+	DebugSessionLog.write_debug("H2", "idol_level_root.gd:_on_popup_closed", "popup_closed_signal_before_restore", {
+		"closed_modal_id": closed_modal_id,
+		"popup_has_overlay": popup_layer.has_overlay(),
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer(),
+		"hotspot_visible": hotspot_layer.visible,
+		"scroll_visible": scroll_panel.visible,
+		"identity_visible": identity_panel.visible,
+		"mapping_visible": mapping_panel.visible
+	})
+	#endregion
 	if popup_layer.has_overlay():
 		popup_layer.close_overlay()
 	_apply_modal_close_events(closed_modal_id)
@@ -255,6 +403,16 @@ func _on_popup_closed(closed_modal_id: String) -> void:
 			restore.get("design_size", Vector2.ZERO)
 		)
 	_sync_pan_lock()
+	#region agent log
+	DebugSessionLog.write_debug("H2", "idol_level_root.gd:_on_popup_closed", "popup_closed_signal_after_restore", {
+		"closed_modal_id": closed_modal_id,
+		"parent_layer": parent_layer,
+		"popup_modal_id": popup_layer.get_current_modal_id(),
+		"hotspot_layer": hotspot_layer.get_current_layer(),
+		"hotspot_visible": hotspot_layer.visible,
+		"pan_locked": scene_pan.is_pan_locked() if scene_pan.has_method("is_pan_locked") else null
+	})
+	#endregion
 
 func _apply_modal_close_events(closed_modal_id: String) -> void:
 	match closed_modal_id:
@@ -264,6 +422,7 @@ func _apply_modal_close_events(closed_modal_id: String) -> void:
 			_slot2_unlock_events["badge_viewed"] = true
 	_evaluate_slot2_unlock()
 	_sync_slot_unlock_events()
+	_stage_level_progress()
 
 func _on_bottom_slot_pressed(slot_id: String) -> void:
 	# 打开槽位前先关掉场景气泡，避免与底栏操作叠在一起
@@ -293,6 +452,8 @@ func _on_bottom_slot_pressed(slot_id: String) -> void:
 			mapping_panel.close_panel(false)
 			identity_panel.open_panel()
 		"slot3":
+			if int(_level_config.get("slot3_enabled", 1)) == 0 or bottom_bar.is_slot_hidden("slot3"):
+				return
 			scroll_panel.close_panel(false)
 			identity_panel.close_panel(false)
 			mapping_panel.open_panel()
@@ -320,6 +481,7 @@ func _on_slot_panel_closed() -> void:
 	#endregion
 	bottom_bar.set_active_slot("")
 	_sync_hotspot_layer_visibility()
+	_flush_level_progress()
 
 func _sync_hotspot_layer_visibility() -> void:
 	if not bool(_pack.get("ok", false)):
@@ -375,6 +537,8 @@ func _evaluate_slot2_unlock() -> void:
 				return
 
 func _evaluate_slot3_unlock() -> void:
+	if int(_level_config.get("slot3_enabled", 1)) == 0:
+		return
 	var unlock_type: String = str(_level_config.get("slot3_unlock_type", ""))
 	var raw_value: String = str(_level_config.get("slot3_unlock_value", ""))
 	if unlock_type.is_empty() or raw_value.is_empty():
@@ -418,19 +582,22 @@ func _on_scroll_completed() -> void:
 	scroll_panel.close_panel(false)
 	_sync_hotspot_layer_visibility()
 	if str(_level_config.get("required_slot", "slot1")) != "slot1":
+		_flush_level_progress()
 		return
 	_apply_completion()
-	_show_truth_overlay()
+	_show_truth_overlay(false)
 
 func _on_identity_completed() -> void:
 	bottom_bar.set_slot_completed("slot2", true)
 	identity_panel.close_panel(false)
 	_sync_hotspot_layer_visibility()
+	_flush_level_progress()
 
 func _on_mapping_completed() -> void:
 	bottom_bar.set_slot_completed("slot3", true)
 	mapping_panel.close_panel(false)
 	_sync_hotspot_layer_visibility()
+	_flush_level_progress()
 
 func _apply_completion() -> void:
 	if _completion_applied:
@@ -441,6 +608,8 @@ func _apply_completion() -> void:
 	var before_completed: bool = _save_manager.is_level_completed(level_id)
 	print("【通关存档自检】【%s】通关前 completed=%s" % [level_id, str(before_completed)])
 	_first_clear_this_finish = not before_completed
+	_is_replay_session = false
+	_save_manager.set_level_progress(level_id, _build_level_progress_patch())
 	_save_manager.mark_level_completed(level_id, true)
 	print("【通关存档自检】【%s】通关后 completed=%s" % [level_id, str(_save_manager.is_level_completed(level_id))])
 	_mark_chapter_completed_if_all_done()
@@ -462,8 +631,11 @@ func _mark_chapter_completed_if_all_done() -> void:
 			return
 	_save_manager.mark_chapter_completed(chapter_id, true)
 
-func _show_truth_overlay() -> void:
+func _show_truth_overlay(review_mode: bool = false) -> void:
 	_ensure_truth_overlay()
+	_truth_is_review_mode = review_mode
+	if _truth_dismiss_btn != null:
+		_truth_dismiss_btn.text = "关闭" if review_mode else "返回艺人动态"
 	_truth_text_label.text = str(_level_config.get("truth_text", "真相尚未配置。"))
 	_truth_reward_label.text = "关卡完成"
 	_truth_layer.visible = true
@@ -521,9 +693,14 @@ func _ensure_truth_overlay() -> void:
 	btn.text = "返回艺人动态"
 	btn.custom_minimum_size = Vector2(220, 48)
 	btn.pressed.connect(_on_truth_button_pressed)
+	_truth_dismiss_btn = btn
 	vbox.add_child(btn)
 
 func _on_truth_button_pressed() -> void:
+	if _truth_is_review_mode:
+		if _truth_layer != null:
+			_truth_layer.visible = false
+		return
 	if _save_manager != null:
 		_save_manager.set_pending_post_level_nav({
 			"page": "feed",
@@ -648,9 +825,15 @@ func _ensure_menu_layer() -> void:
 
 func _on_menu_restart_pressed() -> void:
 	_toggle_menu(false)
+	if _save_manager != null:
+		if _save_manager.is_level_completed(level_id):
+			_is_replay_session = true
+		_save_manager.clear_level_progress(level_id)
+	_force_fresh_restart = true
 	_load_level()
 
 func _on_menu_return_feed_pressed() -> void:
+	_flush_level_progress()
 	if _save_manager != null:
 		_save_manager.set_pending_post_level_nav({
 			"page": "feed",

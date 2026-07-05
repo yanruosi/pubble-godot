@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "level": 0,
+    "name": "零消费路人",
+    "costitemcategory": 1,
+    "costitemcount": 0,
+    "shopdiscount": 0.0,
+    "benefitdesc": "尚未购买任何专辑，无法参与会员专属线下",
+    "unlockconditionid": 0
+  },
+  {
+    "level": 1,
+    "name": "首专入门",
+    "costitemcategory": 1,
+    "costitemcount": 1,
+    "shopdiscount": 0.0,
+    "benefitdesc": "已购首张普通专辑，可进会员门槛活动",
+    "unlockconditionid": 5
+  },
+  {
+    "level": 2,
+    "name": "复购常客",
+    "costitemcategory": 1,
+    "costitemcount": 2,
+    "shopdiscount": 0.05,
+    "benefitdesc": "累计消耗 3 张普通专辑，周边九五折",
+    "unlockconditionid": 0
+  },
+  {
+    "level": 3,
+    "name": "中额投入",
+    "costitemcategory": 1,
+    "costitemcount": 3,
+    "shopdiscount": 0.1,
+    "benefitdesc": "累计消耗 6 张普通专辑，周边九折",
+    "unlockconditionid": 0
+  }
+]

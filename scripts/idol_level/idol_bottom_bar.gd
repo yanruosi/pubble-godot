@@ -36,6 +36,7 @@ static func blocks_hotspot_at(global_pos: Vector2) -> bool:
 
 var _slot_buttons: Dictionary = {}
 var _slot_unlocked: Dictionary = {}
+var _slot_hidden: Dictionary = {}
 var _completed_slots: Dictionary = {}
 var _progress_label: Label
 var _progress_arc: ProgressArcLayer
@@ -75,7 +76,9 @@ func _input(event: InputEvent) -> void:
 	var click_pos: Vector2 = (event as InputEventMouseButton).global_position
 	for slot_id in _slot_buttons.keys():
 		var hit: Control = _slot_buttons[slot_id]
-		if hit == null or not hit.visible or not bool(_slot_unlocked.get(slot_id, false)):
+		if hit == null or bool(_slot_hidden.get(slot_id, false)):
+			continue
+		if not hit.visible or not bool(_slot_unlocked.get(slot_id, false)):
 			continue
 		var gr: Rect2 = hit.get_global_rect()
 		if gr.size.x > 1.0 and gr.has_point(click_pos):
@@ -111,7 +114,24 @@ func update_progress(collected_count: int, vocab_total: int) -> void:
 		_progress_arc.ratio = ratio
 		_progress_arc.queue_redraw()
 
+func set_slot_hidden(slot_id: String, hidden: bool) -> void:
+	_slot_hidden[slot_id] = hidden
+	var hit: Control = _slot_buttons.get(slot_id, null)
+	if hit == null:
+		return
+	if hidden:
+		_slot_unlocked[slot_id] = false
+		hit.visible = false
+		hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return
+	_slot_hidden.erase(slot_id)
+
+func is_slot_hidden(slot_id: String) -> bool:
+	return bool(_slot_hidden.get(slot_id, false))
+
 func set_slot_unlocked(slot_id: String, unlocked: bool) -> void:
+	if bool(_slot_hidden.get(slot_id, false)):
+		return
 	var hit: Control = _slot_buttons.get(slot_id, null)
 	if hit == null:
 		return
@@ -127,6 +147,9 @@ func set_slot_unlocked(slot_id: String, unlocked: bool) -> void:
 
 func set_slot_completed(slot_id: String, completed: bool) -> void:
 	_completed_slots[slot_id] = completed
+
+func is_slot_completed(slot_id: String) -> bool:
+	return bool(_completed_slots.get(slot_id, false))
 
 func set_active_slot(slot_id: String) -> void:
 	for key in _slot_buttons.keys():

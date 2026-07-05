@@ -1,1 +1,47 @@
-[]
+[
+  {
+    "level": 1,
+    "name": "百粉草站",
+    "thresholdexp": 100,
+    "rewarditemid": 0,
+    "rewarditemcount": 0,
+    "idolkara": 0,
+    "videocallid": ""
+  },
+  {
+    "level": 2,
+    "name": "五百粉小站",
+    "thresholdexp": 500,
+    "rewarditemid": 0,
+    "rewarditemcount": 0,
+    "idolkara": 0,
+    "videocallid": ""
+  },
+  {
+    "level": 3,
+    "name": "千粉站",
+    "thresholdexp": 1000,
+    "rewarditemid": 0,
+    "rewarditemcount": 0,
+    "idolkara": 0,
+    "videocallid": ""
+  },
+  {
+    "level": 4,
+    "name": "五千粉大站",
+    "thresholdexp": 5000,
+    "rewarditemid": 0,
+    "rewarditemcount": 0,
+    "idolkara": 0,
+    "videocallid": ""
+  },
+  {
+    "level": 5,
+    "name": "万粉知名站",
+    "thresholdexp": 10000,
+    "rewarditemid": 0,
+    "rewarditemcount": 0,
+    "idolkara": 0,
+    "videocallid": ""
+  }
+]

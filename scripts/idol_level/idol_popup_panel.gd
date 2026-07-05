@@ -8,8 +8,8 @@ signal bubble_dismissed(should_restore_layer: bool)
 signal asset_layout_changed(modal_id: String)
 
 var _dismiss_rect: ColorRect
-var _modal_center: CenterContainer
-var _overlay_center: CenterContainer
+var _modal_center: Control
+var _overlay_center: Control
 var _overlay_wrap: Control
 var _modal_content: Control
 var _modal_panel: PanelContainer
@@ -28,8 +28,12 @@ var _current_layout: String = ""
 var _bubble_only: bool = false
 var _base_design_size: Vector2 = Vector2.ZERO
 var _overlay_design_size: Vector2 = Vector2.ZERO
+var _base_anchor: Vector2 = Vector2(-1, -1)
+var _overlay_anchor: Vector2 = Vector2(-1, -1)
 var _base_display_rect: Rect2 = Rect2()
 var _overlay_display_rect: Rect2 = Rect2()
+var _base_render_size: Vector2 = Vector2.ZERO
+var _overlay_render_size: Vector2 = Vector2.ZERO
 var _dismiss_outside_modals: Dictionary = {}
 var _hotspot_layer: HotspotLayer = null
 var _bubble_dismiss_canvas: CanvasLayer
@@ -50,12 +54,13 @@ func show_modal(
 	title: String,
 	asset_path: String = "",
 	popup_layout: String = "",
-	design_size: Vector2 = Vector2.ZERO
+	design_size: Vector2 = Vector2.ZERO,
+	design_anchor: Vector2 = Vector2(-1, -1)
 ) -> void:
 	var layout: String = _resolve_layout(modal_id, popup_layout)
 	if modal_id.begins_with("panel_") and not _base_modal_id.is_empty() and _modal_center.visible:
 		_overlay_design_size = design_size
-		_show_overlay(modal_id, asset_path, layout)
+		_show_overlay(modal_id, asset_path, layout, design_anchor)
 		return
 	_hide_overlay()
 	_base_modal_id = modal_id
@@ -63,7 +68,9 @@ func show_modal(
 	_current_modal_id = modal_id
 	_current_layout = layout
 	_base_design_size = design_size
+	_base_anchor = design_anchor
 	_overlay_design_size = Vector2.ZERO
+	_overlay_anchor = Vector2(-1, -1)
 	_bubble_panel.visible = false
 	_modal_center.visible = true
 	_apply_asset_display(title, asset_path, _base_design_size)
@@ -72,6 +79,7 @@ func show_modal(
 	DebugSessionLog.write("H1", "idol_popup_panel.gd:show_modal", "base_modal_opened", {
 		"modal_id": modal_id,
 		"design_size": [design_size.x, design_size.y],
+		"design_anchor": [design_anchor.x, design_anchor.y],
 		"layout": layout
 	})
 	#endregion
@@ -150,6 +158,15 @@ func close_base_modal() -> void:
 	if _base_modal_id.is_empty() and _current_modal_id.is_empty():
 		return
 	var closed_modal_id: String = _base_modal_id if not _base_modal_id.is_empty() else _current_modal_id
+	#region agent log
+	DebugSessionLog.write_debug("H2", "idol_popup_panel.gd:close_base_modal", "close_base_modal", {
+		"closed_modal_id": closed_modal_id,
+		"current_modal_id": _current_modal_id,
+		"overlay_modal_id": _overlay_modal_id,
+		"bubble_visible": _bubble_panel.visible if _bubble_panel != null else false,
+		"dismiss_visible": _dismiss_rect.visible if _dismiss_rect != null else false
+	})
+	#endregion
 	hide_all()
 	popup_closed.emit(closed_modal_id)
 	close_requested.emit()
@@ -164,8 +181,12 @@ func hide_all() -> void:
 	_bubble_only = false
 	_base_design_size = Vector2.ZERO
 	_overlay_design_size = Vector2.ZERO
+	_base_anchor = Vector2(-1, -1)
+	_overlay_anchor = Vector2(-1, -1)
 	_base_display_rect = Rect2()
 	_overlay_display_rect = Rect2()
+	_base_render_size = Vector2.ZERO
+	_overlay_render_size = Vector2.ZERO
 	if _dismiss_rect != null:
 		_dismiss_rect.visible = false
 		_dismiss_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -190,10 +211,18 @@ func close_overlay() -> void:
 	if _overlay_modal_id.is_empty():
 		return
 	var closed_id: String = _overlay_modal_id
+	#region agent log
+	DebugSessionLog.write_debug("H2", "idol_popup_panel.gd:close_overlay", "close_overlay", {
+		"closed_overlay_id": closed_id,
+		"base_modal_id": _base_modal_id,
+		"current_modal_id": _current_modal_id,
+		"dismiss_visible": _dismiss_rect.visible if _dismiss_rect != null else false
+	})
+	#endregion
 	_hide_overlay()
 	if _base_modal_id.is_empty():
 		set_process_unhandled_input(false)
-	elif _uses_dismiss_outside_base():
+	elif _uses_dismiss_outside_base() or _forwards_sublayer_clicks():
 		_sync_base_dismiss_rect(_base_modal_id)
 	_current_modal_id = _base_modal_id
 	_current_layout = _base_layout
@@ -221,6 +250,7 @@ func _apply_asset_display(title: String, asset_path: String, design_size: Vector
 		_modal_title.text = title
 		_modal_body.text = "（占位预览区，请点击图上热点）"
 		var placeholder_size: Vector2 = _resolved_design_size(design_size, Vector2.ZERO)
+		_base_render_size = placeholder_size
 		if _modal_placeholder != null:
 			_modal_placeholder.color = _placeholder_color(title)
 			_modal_placeholder.custom_minimum_size = placeholder_size
@@ -237,6 +267,7 @@ func _apply_asset_display(title: String, asset_path: String, design_size: Vector
 			_modal_title.visible = false
 			_modal_body.visible = false
 			var display_size: Vector2 = _fit_size_to_viewport(tex.get_size(), _resolved_design_size(design_size, tex.get_size()))
+			_base_render_size = display_size
 			_apply_texture_to_rect(_modal_image, display_size)
 			return
 	_modal_title.visible = true
@@ -245,8 +276,14 @@ func _apply_asset_display(title: String, asset_path: String, design_size: Vector
 	_modal_title.text = title
 	_modal_body.text = "物件图加载失败：%s" % asset_path
 
-func _show_overlay(overlay_id: String, asset_path: String, layout: String) -> void:
+func _show_overlay(overlay_id: String, asset_path: String, layout: String, design_anchor: Vector2 = Vector2(-1, -1)) -> void:
 	_overlay_modal_id = overlay_id
+	if design_anchor.x >= 0.0 and design_anchor.y >= 0.0:
+		_overlay_anchor = design_anchor
+	elif _base_anchor.x >= 0.0 and _base_anchor.y >= 0.0:
+		_overlay_anchor = _base_anchor
+	else:
+		_overlay_anchor = Vector2(-1, -1)
 	_current_modal_id = overlay_id
 	_current_layout = layout
 	set_process_unhandled_input(true)
@@ -270,6 +307,7 @@ func _show_overlay(overlay_id: String, asset_path: String, layout: String) -> vo
 		tex.get_size(),
 		_resolved_design_size(_overlay_design_size, tex.get_size())
 	)
+	_overlay_render_size = display_size
 	_overlay_image.custom_minimum_size = display_size
 	_overlay_image.size = display_size
 	if _overlay_wrap != null:
@@ -280,7 +318,9 @@ func _show_overlay(overlay_id: String, asset_path: String, layout: String) -> vo
 func _hide_overlay() -> void:
 	_overlay_modal_id = ""
 	_overlay_design_size = Vector2.ZERO
+	_overlay_anchor = Vector2(-1, -1)
 	_overlay_display_rect = Rect2()
+	_overlay_render_size = Vector2.ZERO
 	if _overlay_center != null:
 		_overlay_center.visible = false
 	if _overlay_image != null:
@@ -330,16 +370,82 @@ func _refresh_asset_layout() -> void:
 		_base_display_rect = Rect2()
 		_overlay_display_rect = Rect2()
 		return
-	if _modal_image.visible:
-		_base_display_rect = _modal_image.get_global_rect()
+	var notify_id: String = _overlay_modal_id if not _overlay_modal_id.is_empty() else _current_modal_id
+	_apply_modal_placement()
+	if _modal_center.visible:
+		_base_display_rect = _modal_center.get_global_rect()
 	else:
-		_base_display_rect = _modal_content.get_global_rect()
-	if _overlay_image.visible:
-		_overlay_display_rect = _overlay_image.get_global_rect()
+		_base_display_rect = Rect2()
+	if _overlay_center != null and _overlay_center.visible:
+		_overlay_display_rect = _overlay_center.get_global_rect()
 	else:
 		_overlay_display_rect = Rect2()
-	var notify_id: String = _overlay_modal_id if not _overlay_modal_id.is_empty() else _current_modal_id
 	asset_layout_changed.emit(notify_id)
+
+func _modal_display_size() -> Vector2:
+	if _base_render_size.x > 1.0 and _base_render_size.y > 1.0:
+		return _base_render_size
+	return _resolved_design_size(_base_design_size, Vector2.ZERO)
+
+func _overlay_display_size() -> Vector2:
+	if _overlay_render_size.x > 1.0 and _overlay_render_size.y > 1.0:
+		return _overlay_render_size
+	return _resolved_design_size(_overlay_design_size, Vector2.ZERO)
+
+func _apply_modal_placement() -> void:
+	if _modal_center != null and _modal_center.visible:
+		var base_size: Vector2 = _modal_display_size()
+		_place_modal_container(_modal_center, _base_anchor, base_size)
+		_layout_modal_children_fill()
+	if _overlay_center != null and _overlay_center.visible:
+		var overlay_size: Vector2 = _overlay_display_size()
+		_place_modal_container(_overlay_center, _overlay_anchor, overlay_size)
+		_layout_overlay_children_fill()
+
+func _place_modal_container(container: Control, anchor: Vector2, display_size: Vector2) -> void:
+	container.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	container.set_offsets_preset(Control.PRESET_TOP_LEFT)
+	container.size = display_size
+	if anchor.x >= 0.0 and anchor.y >= 0.0:
+		container.position = anchor
+	else:
+		var vp: Vector2 = get_viewport_rect().size
+		container.position = (vp - display_size) * 0.5
+
+func _layout_modal_children_fill() -> void:
+	if _modal_panel == null:
+		return
+	_modal_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_modal_panel.set_offsets_preset(Control.PRESET_FULL_RECT)
+	if _modal_content != null:
+		_modal_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_modal_content.set_offsets_preset(Control.PRESET_FULL_RECT)
+	if _modal_image != null and _modal_image.visible:
+		_modal_image.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_modal_image.set_offsets_preset(Control.PRESET_FULL_RECT)
+
+func _layout_overlay_children_fill() -> void:
+	if _overlay_wrap == null:
+		return
+	_overlay_wrap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay_wrap.set_offsets_preset(Control.PRESET_FULL_RECT)
+	if _overlay_image != null and _overlay_image.visible:
+		_overlay_image.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_overlay_image.set_offsets_preset(Control.PRESET_FULL_RECT)
+	#region agent log
+	DebugSessionLog.write_debug("P1", "idol_popup_panel.gd:_apply_modal_placement", "placement_applied", {
+		"base_modal_id": _base_modal_id,
+		"overlay_modal_id": _overlay_modal_id,
+		"base_anchor": [_base_anchor.x, _base_anchor.y],
+		"overlay_anchor": [_overlay_anchor.x, _overlay_anchor.y],
+		"base_display_rect": [_base_display_rect.position.x, _base_display_rect.position.y, _base_display_rect.size.x, _base_display_rect.size.y],
+		"overlay_display_rect": [_overlay_display_rect.position.x, _overlay_display_rect.position.y, _overlay_display_rect.size.x, _overlay_display_rect.size.y],
+		"base_render_size": [_base_render_size.x, _base_render_size.y],
+		"overlay_render_size": [_overlay_render_size.x, _overlay_render_size.y],
+		"modal_center_pos": [_modal_center.position.x, _modal_center.position.y] if _modal_center != null else [-1, -1],
+		"overlay_center_pos": [_overlay_center.position.x, _overlay_center.position.y] if _overlay_center != null else [-1, -1]
+	})
+	#endregion
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED and not _current_modal_id.is_empty():
@@ -363,6 +469,7 @@ func _relayout_overlay() -> void:
 		_overlay_image.texture.get_size(),
 		_resolved_design_size(_overlay_design_size, _overlay_image.texture.get_size())
 	)
+	_overlay_render_size = display_size
 	_overlay_image.custom_minimum_size = display_size
 	_overlay_image.size = display_size
 	if _overlay_wrap != null:
@@ -406,13 +513,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		close_overlay()
 		get_viewport().set_input_as_handled()
 		return
-	if _uses_dismiss_outside_base():
+	if _uses_dismiss_outside_base() or _forwards_sublayer_clicks():
 		if _base_display_rect.size.x > 1.0 and _base_display_rect.has_point(click_pos):
 			if _hotspot_layer != null and _hotspot_layer.try_activate_at_global_pos(click_pos):
 				get_viewport().set_input_as_handled()
 			return
-		close_base_modal()
-		get_viewport().set_input_as_handled()
+		if _uses_dismiss_outside_base():
+			close_base_modal()
+			get_viewport().set_input_as_handled()
 
 func _on_dismiss_rect_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
@@ -452,7 +560,7 @@ func _on_dismiss_rect_input(event: InputEvent) -> void:
 		_bubble_panel.visible = false
 		_bubble_only = false
 		bubble_dismissed.emit(false)
-		if not _overlay_modal_id.is_empty() or _uses_dismiss_outside_base():
+		if not _overlay_modal_id.is_empty() or _uses_dismiss_outside_base() or _forwards_sublayer_clicks():
 			_dismiss_rect.visible = true
 			_dismiss_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 			_dismiss_rect.z_index = 0
@@ -482,7 +590,7 @@ func _handle_modal_click(click_pos: Vector2) -> bool:
 		#endregion
 		close_overlay()
 		return true
-	if _uses_dismiss_outside_base():
+	if _uses_dismiss_outside_base() or _forwards_sublayer_clicks():
 		if _base_display_rect.size.x > 1.0 and _base_display_rect.has_point(click_pos):
 			#region agent log
 			DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "inside_base", {})
@@ -490,26 +598,44 @@ func _handle_modal_click(click_pos: Vector2) -> bool:
 			if _hotspot_layer != null and _hotspot_layer.try_activate_at_global_pos(click_pos):
 				return true
 			return true
-		#region agent log
-		DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "outside_base_close", {})
-		#endregion
-		close_base_modal()
+		if _uses_dismiss_outside_base():
+			#region agent log
+			DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "outside_base_close", {})
+			#endregion
+			close_base_modal()
+			return true
 		return true
 	return false
 
 func _uses_dismiss_outside_base() -> bool:
 	return not _base_modal_id.is_empty() and bool(_dismiss_outside_modals.get(_base_modal_id, false))
 
+func _forwards_sublayer_clicks() -> bool:
+	if _base_modal_id.is_empty() or _hotspot_layer == null:
+		return false
+	return _hotspot_layer.has_hotspots_for_parent(_base_modal_id)
+
 func _sync_base_dismiss_rect(modal_id: String) -> void:
 	if _dismiss_rect == null:
 		return
-	var enable: bool = bool(_dismiss_outside_modals.get(modal_id, false))
-	_dismiss_rect.visible = enable
-	_dismiss_rect.mouse_filter = Control.MOUSE_FILTER_STOP if enable else Control.MOUSE_FILTER_IGNORE
-	set_process_unhandled_input(enable)
+	var dismiss_outside: bool = bool(_dismiss_outside_modals.get(modal_id, false))
+	var forward_clicks: bool = dismiss_outside or (
+		_hotspot_layer != null and _hotspot_layer.has_hotspots_for_parent(modal_id)
+	)
+	_dismiss_rect.visible = forward_clicks
+	_dismiss_rect.mouse_filter = Control.MOUSE_FILTER_STOP if forward_clicks else Control.MOUSE_FILTER_IGNORE
+	set_process_unhandled_input(dismiss_outside)
 	_dismiss_rect.z_index = 0
 	if _modal_center != null:
 		_modal_center.z_index = 1
+	#region agent log
+	DebugSessionLog.write_debug("P3", "idol_popup_panel.gd:_sync_base_dismiss_rect", "dismiss_sync", {
+		"modal_id": modal_id,
+		"dismiss_outside": dismiss_outside,
+		"forward_clicks": forward_clicks,
+		"has_sublayer": _hotspot_layer.has_hotspots_for_parent(modal_id) if _hotspot_layer != null else false
+	})
+	#endregion
 
 func _ensure_bubble_dismiss_canvas() -> void:
 	if _bubble_dismiss_canvas != null:
@@ -564,6 +690,11 @@ func _on_bubble_dismiss_catcher_gui_input(event: InputEvent) -> void:
 	# 底栏区域不吞事件，交给 BottomBar 处理槽位
 	if IdolBottomBar.blocks_hotspot_at(click_pos):
 		#region agent log
+		DebugSessionLog.write_debug("H3", "idol_popup_panel.gd:_on_bubble_dismiss_catcher_gui_input", "bottom_pass_through_while_bubble_canvas", {
+			"click_pos": [click_pos.x, click_pos.y],
+			"canvas_visible": _bubble_dismiss_canvas.visible if _bubble_dismiss_canvas != null else false,
+			"bubble_visible": _bubble_panel.visible if _bubble_panel != null else false
+		})
 		_debug_log("H5", "idol_popup_panel.gd:_on_bubble_dismiss_catcher_gui_input", "pass_through_bottom_ui", {
 			"click_pos": [click_pos.x, click_pos.y]
 		})
@@ -589,15 +720,13 @@ func _build_ui() -> void:
 	_dismiss_rect.gui_input.connect(_on_dismiss_rect_input)
 	add_child(_dismiss_rect)
 
-	_modal_center = CenterContainer.new()
+	_modal_center = Control.new()
 	_modal_center.name = "ModalCenter"
-	_modal_center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_modal_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_modal_center)
 
-	_overlay_center = CenterContainer.new()
+	_overlay_center = Control.new()
 	_overlay_center.name = "OverlayCenter"
-	_overlay_center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_overlay_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay_center.visible = false
 	add_child(_overlay_center)
@@ -605,6 +734,8 @@ func _build_ui() -> void:
 	_overlay_wrap = Control.new()
 	_overlay_wrap.name = "OverlayWrap"
 	_overlay_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_overlay_wrap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay_wrap.set_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay_center.add_child(_overlay_wrap)
 
 	_overlay_image = TextureRect.new()
@@ -618,6 +749,8 @@ func _build_ui() -> void:
 	_modal_panel = PanelContainer.new()
 	_modal_panel.name = "ModalPanel"
 	_modal_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_modal_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_modal_panel.set_offsets_preset(Control.PRESET_FULL_RECT)
 	_set_panel_frame_visible(false)
 	_modal_center.add_child(_modal_panel)
 
@@ -632,6 +765,8 @@ func _build_ui() -> void:
 	_modal_content = Control.new()
 	_modal_content.name = "ModalContent"
 	_modal_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_modal_content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_modal_content.set_offsets_preset(Control.PRESET_FULL_RECT)
 	modal_margin.add_child(_modal_content)
 
 	_modal_image = TextureRect.new()

@@ -1,13 +1,14 @@
 extends RefCounted
 class_name DebugSessionLog
 
-const LOG_PATH := "res://debug-cabb3b.log"
-const DEBUG_LOG_PATH := "res://debug-9f0632.log"
-const DEBUG_SESSION_ID := "9f0632"
+const LOG_PATH := "res://debug-b9ced2.log"
+const DEBUG_LOG_PATH := "res://debug-b9ced2.log"
+const DEBUG_SESSION_ID := "b9ced2"
 
 static func write_debug(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
 	var payload := {
 		"sessionId": DEBUG_SESSION_ID,
+		"runId": "initial",
 		"hypothesisId": hypothesis_id,
 		"location": location,
 		"message": message,
@@ -26,7 +27,8 @@ static func write_debug(hypothesis_id: String, location: String, message: String
 
 static func write(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
 	var payload := {
-		"sessionId": "cabb3b",
+		"sessionId": DEBUG_SESSION_ID,
+		"runId": "initial",
 		"hypothesisId": hypothesis_id,
 		"location": location,
 		"message": message,

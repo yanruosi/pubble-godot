@@ -71,3 +71,18 @@ func get_collected_vocab(filter_tag: String = "") -> Array:
 func is_name_vocab(vocab_id: String) -> bool:
 	var row: Dictionary = get_vocab(vocab_id)
 	return str(row.get("tag", "")) == "name"
+
+
+func restore_collected(vocab_ids: Array) -> void:
+	var changed_any := false
+	for item in vocab_ids:
+		var vocab_id: String = str(item)
+		if vocab_id.is_empty() or not _vocab_by_id.has(vocab_id):
+			continue
+		if bool(_collected_ids.get(vocab_id, false)):
+			continue
+		_collected_ids[vocab_id] = true
+		_collected_order.append(vocab_id)
+		changed_any = true
+	if changed_any:
+		changed.emit(collected_count(), _total_count)

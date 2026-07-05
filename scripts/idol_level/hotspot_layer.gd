@@ -33,6 +33,23 @@ func _ready() -> void:
 
 ## 根层气泡显示时暂时禁用热点点击，避免抢走关闭层事件
 func set_hotspot_input_enabled(enabled: bool) -> void:
+	#region agent log
+	var before_states: Array = []
+	for child_before in get_children():
+		if child_before is HotspotNode:
+			var node_before := child_before as HotspotNode
+			before_states.append({
+				"id": str(node_before.hotspot_row.get("hotspot_id", "")),
+				"disabled": node_before.disabled,
+				"mouse_filter": node_before.mouse_filter
+			})
+	DebugSessionLog.write_debug("H4", "hotspot_layer.gd:set_hotspot_input_enabled", "input_toggle_before", {
+		"enabled": enabled,
+		"current_parent": _current_parent,
+		"layer_visible": visible,
+		"states": before_states
+	})
+	#endregion
 	for child in get_children():
 		if not (child is HotspotNode):
 			continue
@@ -46,6 +63,25 @@ static func coord_base_from_row(row: Dictionary) -> Vector2:
 	if bw > 0.0 and bh > 0.0:
 		return Vector2(bw, bh)
 	return Vector2.ZERO
+
+## editor_note 含 anchor=X,Y 时返回 PSD 1280×720 左上角锚点；否则 (-1,-1) 表示居中
+static func anchor_from_row(row: Dictionary) -> Vector2:
+	var note: String = str(row.get("editor_note", ""))
+	var token := "anchor="
+	var idx: int = note.find(token)
+	if idx < 0:
+		return Vector2(-1, -1)
+	var rest: String = note.substr(idx + token.length()).strip_edges()
+	var comma_idx: int = rest.find(",")
+	if comma_idx < 0:
+		return Vector2(-1, -1)
+	var xs: String = rest.substr(0, comma_idx).strip_edges()
+	var ys: String = rest.substr(comma_idx + 1).strip_edges()
+	if ys.contains(" "):
+		ys = ys.split(" ", false)[0]
+	if xs.is_empty() or ys.is_empty():
+		return Vector2(-1, -1)
+	return Vector2(float(xs), float(ys))
 
 func set_popup_panel(panel: IdolPopupPanel) -> void:
 	if _popup_panel != null:
@@ -147,6 +183,9 @@ func get_layer_coord_base(layer_id: String) -> Vector2:
 func get_current_layer() -> String:
 	return _current_parent
 
+func has_hotspots_for_parent(parent_id: String) -> bool:
+	return not _hotspots_by_parent.get(parent_id, []).is_empty()
+
 func get_parent_layer(layer_id: String) -> String:
 	return str(_layer_parents.get(layer_id, ROOT_LAYER))
 
@@ -169,7 +208,24 @@ func mark_hotspot_used(hotspot_id: String) -> void:
 	if hotspot_id.is_empty():
 		return
 	_used_hotspots[hotspot_id] = true
+	if _save_manager != null and not _level_id.is_empty():
+		_save_manager.mark_hotspot_used(_level_id, hotspot_id)
 	show_layer(_current_parent)
+
+func restore_used_hotspots(ids: Array) -> void:
+	for item in ids:
+		var hid: String = str(item)
+		if not hid.is_empty():
+			_used_hotspots[hid] = true
+	if not _hotspots_by_parent.is_empty():
+		show_layer(_current_parent)
+
+func get_used_hotspot_ids() -> Array:
+	var result: Array = []
+	for key in _used_hotspots.keys():
+		if bool(_used_hotspots[key]):
+			result.append(str(key))
+	return result
 
 func mark_hotspot_viewed(hotspot_id: String) -> void:
 	if hotspot_id.is_empty():
@@ -205,6 +261,14 @@ func show_layer(parent_id: String) -> void:
 	var target_rect: Rect2 = _target_rect_for_parent(parent_id)
 	var base_size: Vector2 = _base_size_for_parent(parent_id)
 	#region agent log
+	DebugSessionLog.write_debug("H1", "hotspot_layer.gd:show_layer", "layer_rebuilt", {
+		"parent_id": parent_id,
+		"is_root": is_root,
+		"layer_visible": visible,
+		"layer_mouse_filter": mouse_filter,
+		"z_index": z_index,
+		"row_count": rows.size()
+	})
 	if parent_id.begins_with("panel_") or parent_id.begins_with("modal_"):
 		DebugSessionLog.write("H2", "hotspot_layer.gd:show_layer", "popup_layer_built", {
 			"parent_id": parent_id,
@@ -233,6 +297,10 @@ func show_layer(parent_id: String) -> void:
 		#endregion
 		hotspot.setup(row, scaled)
 		var hotspot_id: String = str(row.get("hotspot_id", ""))
+		#region agent log
+		if hotspot_id == "hs_109" and parent_id == ROOT_LAYER:
+			call_deferred("_log_hs109_rect", hotspot)
+		#endregion
 		if bool(_used_hotspots.get(hotspot_id, false)):
 			hotspot.set_used()
 		elif bool(_viewed_hotspots.get(hotspot_id, false)):
@@ -259,6 +327,14 @@ func restore_after_popup_close() -> Dictionary:
 		result["asset_path"] = get_layer_asset(parent_layer)
 		result["popup_layout"] = get_layer_layout(parent_layer)
 		result["design_size"] = get_layer_coord_base(parent_layer)
+	#region agent log
+	DebugSessionLog.write_debug("H1", "hotspot_layer.gd:restore_after_popup_close", "restore_after_close", {
+		"current_parent_after": _current_parent,
+		"parent_layer": parent_layer,
+		"result_asset": str(result.get("asset_path", "")),
+		"layer_visible": visible
+	})
+	#endregion
 	return result
 
 func _on_popup_asset_layout_changed(modal_id: String) -> void:
@@ -418,3 +494,16 @@ func _scaled_rect(row: Dictionary, target_rect: Rect2, base_size: Vector2) -> Re
 			maxf(min_size, float(row.get("height", 1.0)) * sy)
 		)
 	)
+
+func _log_hs109_rect(hotspot: HotspotNode) -> void:
+	if not is_instance_valid(hotspot):
+		return
+	var gr: Rect2 = hotspot.get_global_rect()
+	#region agent log
+	DebugSessionLog.write_debug("P4", "hotspot_layer.gd:_log_hs109_rect", "hs_109_global_rect", {
+		"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y],
+		"expected_psd": [320, 152, 71, 147],
+		"root_pan_x": _root_pan_x,
+		"root_scene_size": [_root_scene_size.x, _root_scene_size.y]
+	})
+	#endregion

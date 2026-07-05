@@ -2,7 +2,7 @@
   {
     "post_id": "ch1_1_post",
     "type": 901,
-    "condition_id": 4001,
+    "condition_id": 0,
     "level_id": "ch1_l01",
     "name": "Lee",
     "time": "02.14.2026",
@@ -14,7 +14,7 @@
   {
     "post_id": "ch1_2_post",
     "type": 901,
-    "condition_id": 4002,
+    "condition_id": 2001,
     "level_id": "ch1_l02",
     "name": "Lee",
     "time": "04.30.2023",
@@ -26,7 +26,7 @@
   {
     "post_id": "ch1_3_post",
     "type": 901,
-    "condition_id": 4003,
+    "condition_id": 2002,
     "level_id": "ch1_l03",
     "name": "Lee",
     "time": "04.30.2024",
@@ -38,7 +38,7 @@
   {
     "post_id": "ch1_4_post",
     "type": 901,
-    "condition_id": 4004,
+    "condition_id": 2003,
     "level_id": "ch1_l04",
     "name": "Lee",
     "time": "04.30.2025",
@@ -50,7 +50,7 @@
   {
     "post_id": "ch1_5_post",
     "type": 901,
-    "condition_id": 4005,
+    "condition_id": 2003,
     "level_id": "ch1_l05",
     "name": "Lee",
     "time": "04.30.2026",

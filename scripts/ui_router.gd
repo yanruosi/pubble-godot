@@ -129,6 +129,11 @@ func _apply_boot_entry() -> void:
 	if target == "home":
 		show_page(PageId.HOME)
 		return
+	if target == "continue":
+		if save_manager != null:
+			save_manager.load_progress()
+		show_page(PageId.HOME)
+		return
 	if not _apply_pending_post_level_nav():
 		show_page(PageId.HOME)
 

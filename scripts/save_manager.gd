@@ -10,6 +10,7 @@ var chapter_unlocked: Dictionary = {}
 var chapter_new_badge: Dictionary = {}
 var level_unlocked: Dictionary = {}
 var level_completed: Dictionary = {}
+var level_progress: Dictionary = {}
 var level_hotspot_clicked: Dictionary = {}
 var recent_opened_chapter_id: int = 0
 var recent_opened_level_id: String = ""
@@ -43,6 +44,7 @@ func load_progress() -> void:
 	chapter_new_badge = config.get_value("chapter", "new_badge", {})
 	level_unlocked = config.get_value("level", "unlocked", {})
 	level_completed = config.get_value("level", "completed", {})
+	level_progress = config.get_value("level", "progress", {})
 	level_hotspot_clicked = config.get_value("level_hotspot", "clicked", {})
 	if not (chapter_completed is Dictionary):
 		chapter_completed = {}
@@ -54,6 +56,8 @@ func load_progress() -> void:
 		level_unlocked = {}
 	if not (level_completed is Dictionary):
 		level_completed = {}
+	if not (level_progress is Dictionary):
+		level_progress = {}
 	if not (level_hotspot_clicked is Dictionary):
 		level_hotspot_clicked = {}
 	feed_seen = config.get_value("feed", "seen", {})
@@ -76,6 +80,7 @@ func reset_progress() -> void:
 	chapter_new_badge.clear()
 	level_unlocked.clear()
 	level_completed.clear()
+	level_progress.clear()
 	level_hotspot_clicked.clear()
 	feed_seen.clear()
 	feed_pinned_post_id = ""
@@ -126,6 +131,7 @@ func save_progress() -> void:
 	config.set_value("chapter", "new_badge", chapter_new_badge)
 	config.set_value("level", "unlocked", level_unlocked)
 	config.set_value("level", "completed", level_completed)
+	config.set_value("level", "progress", level_progress)
 	config.set_value("level_hotspot", "clicked", level_hotspot_clicked)
 	config.set_value("feed", "seen", feed_seen)
 	config.set_value("feed", "pinned_post_id", feed_pinned_post_id)
@@ -252,3 +258,51 @@ func mark_level_completed(level_id: String, completed: bool = true) -> void:
 	if completed:
 		level_unlocked[level_id] = true
 	save_progress()
+
+
+func get_level_progress(level_id: String) -> Dictionary:
+	if level_id.is_empty():
+		return {}
+	var raw: Variant = level_progress.get(level_id, {})
+	if raw is Dictionary:
+		return (raw as Dictionary).duplicate(true)
+	return {}
+
+
+## 仅更新内存中的关卡进度，不写盘；需配合 save_progress() 持久化。
+func set_level_progress(level_id: String, patch: Dictionary) -> void:
+	if level_id.is_empty() or patch.is_empty():
+		return
+	var current: Dictionary = get_level_progress(level_id)
+	for key in patch.keys():
+		current[key] = patch[key]
+	level_progress[level_id] = current
+
+
+func clear_level_progress(level_id: String) -> void:
+	if level_id.is_empty():
+		return
+	if is_level_completed(level_id):
+		var existing: Dictionary = get_level_progress(level_id)
+		level_progress[level_id] = {
+			"scroll_fills": existing.get("scroll_fills", {}),
+			"identity_fills": existing.get("identity_fills", {}),
+			"slots_completed": existing.get("slots_completed", {}),
+		}
+	else:
+		level_progress.erase(level_id)
+	save_progress()
+
+
+func mark_hotspot_used(level_id: String, hotspot_id: String) -> void:
+	if level_id.is_empty() or hotspot_id.is_empty():
+		return
+	var current: Dictionary = get_level_progress(level_id)
+	var used_raw: Variant = current.get("hotspot_used", [])
+	var used: Array = []
+	if used_raw is Array:
+		used = (used_raw as Array).duplicate()
+	if not used.has(hotspot_id):
+		used.append(hotspot_id)
+	current["hotspot_used"] = used
+	level_progress[level_id] = current

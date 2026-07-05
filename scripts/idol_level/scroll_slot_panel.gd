@@ -103,6 +103,18 @@ func close_panel(emit_signal := true) -> void:
 	if emit_signal:
 		closed.emit()
 
+func get_fills() -> Dictionary:
+	return _fills.duplicate(true)
+
+func restore_fills(fills: Dictionary) -> void:
+	_fills = fills.duplicate(true)
+	for vocab_id in _fills.values():
+		var vid: String = str(vocab_id)
+		if not vid.is_empty():
+			_pool_vocab_order.erase(vid)
+	_refresh_all_blanks()
+	_refresh_vocab_chips()
+
 func _set_panel_active(active: bool) -> void:
 	visible = active
 	mouse_filter = Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
