@@ -33,23 +33,6 @@ func _ready() -> void:
 
 ## 根层气泡显示时暂时禁用热点点击，避免抢走关闭层事件
 func set_hotspot_input_enabled(enabled: bool) -> void:
-	#region agent log
-	var before_states: Array = []
-	for child_before in get_children():
-		if child_before is HotspotNode:
-			var node_before := child_before as HotspotNode
-			before_states.append({
-				"id": str(node_before.hotspot_row.get("hotspot_id", "")),
-				"disabled": node_before.disabled,
-				"mouse_filter": node_before.mouse_filter
-			})
-	DebugSessionLog.write_debug("H4", "hotspot_layer.gd:set_hotspot_input_enabled", "input_toggle_before", {
-		"enabled": enabled,
-		"current_parent": _current_parent,
-		"layer_visible": visible,
-		"states": before_states
-	})
-	#endregion
 	for child in get_children():
 		if not (child is HotspotNode):
 			continue
@@ -106,15 +89,6 @@ func try_activate_at_global_pos(global_pos: Vector2) -> bool:
 		var node := child as HotspotNode
 		var gr: Rect2 = node.get_global_rect()
 		var contains: bool = gr.size.x > 1.0 and gr.has_point(global_pos)
-		#region agent log
-		DebugSessionLog.write_debug("H6", "hotspot_layer.gd:try_activate_at_global_pos", "hit_test", {
-			"hotspot_id": str(node.hotspot_row.get("hotspot_id", "")),
-			"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y],
-			"click_pos": [global_pos.x, global_pos.y],
-			"contains": contains,
-			"current_parent": _current_parent
-		})
-		#endregion
 		if contains:
 			node._on_pressed()
 			return true
@@ -260,47 +234,13 @@ func show_layer(parent_id: String) -> void:
 	)
 	var target_rect: Rect2 = _target_rect_for_parent(parent_id)
 	var base_size: Vector2 = _base_size_for_parent(parent_id)
-	#region agent log
-	DebugSessionLog.write_debug("H1", "hotspot_layer.gd:show_layer", "layer_rebuilt", {
-		"parent_id": parent_id,
-		"is_root": is_root,
-		"layer_visible": visible,
-		"layer_mouse_filter": mouse_filter,
-		"z_index": z_index,
-		"row_count": rows.size()
-	})
-	if parent_id.begins_with("panel_") or parent_id.begins_with("modal_"):
-		DebugSessionLog.write("H2", "hotspot_layer.gd:show_layer", "popup_layer_built", {
-			"parent_id": parent_id,
-			"base_size": [base_size.x, base_size.y],
-			"target_rect": [target_rect.position.x, target_rect.position.y, target_rect.size.x, target_rect.size.y],
-			"row_count": rows.size()
-		})
-	#endregion
 	for row in rows:
 		var hotspot := HotspotNode.new()
 		add_child(hotspot)
 		hotspot.z_index = clampi(int(row.get("z_order", 0)), 0, 10)
 		var scaled: Rect2 = _scaled_rect(row, target_rect, base_size)
-		#region agent log
-		if parent_id == "modal_107" or str(row.get("hotspot_id", "")).begins_with("hs_phone"):
-			DebugSessionLog.write_debug("H2", "hotspot_layer.gd:show_layer", "child_hotspot_built", {
-				"hotspot_id": str(row.get("hotspot_id", "")),
-				"parent_id": parent_id,
-				"layer_mouse_filter": "ignore" if not is_root else "pass",
-				"layer_z_index": z_index,
-				"table_xywh": [int(row.get("x", 0)), int(row.get("y", 0)), int(row.get("width", 0)), int(row.get("height", 0))],
-				"base_size": [base_size.x, base_size.y],
-				"scaled_rect": [scaled.position.x, scaled.position.y, scaled.size.x, scaled.size.y],
-				"current_modal_id": _popup_panel.get_current_modal_id() if _popup_panel != null else ""
-			})
-		#endregion
 		hotspot.setup(row, scaled)
 		var hotspot_id: String = str(row.get("hotspot_id", ""))
-		#region agent log
-		if hotspot_id == "hs_109" and parent_id == ROOT_LAYER:
-			call_deferred("_log_hs109_rect", hotspot)
-		#endregion
 		if bool(_used_hotspots.get(hotspot_id, false)):
 			hotspot.set_used()
 		elif bool(_viewed_hotspots.get(hotspot_id, false)):
@@ -327,14 +267,6 @@ func restore_after_popup_close() -> Dictionary:
 		result["asset_path"] = get_layer_asset(parent_layer)
 		result["popup_layout"] = get_layer_layout(parent_layer)
 		result["design_size"] = get_layer_coord_base(parent_layer)
-	#region agent log
-	DebugSessionLog.write_debug("H1", "hotspot_layer.gd:restore_after_popup_close", "restore_after_close", {
-		"current_parent_after": _current_parent,
-		"parent_layer": parent_layer,
-		"result_asset": str(result.get("asset_path", "")),
-		"layer_visible": visible
-	})
-	#endregion
 	return result
 
 func _on_popup_asset_layout_changed(modal_id: String) -> void:
@@ -362,14 +294,6 @@ func _mark_question_discovered(row: Dictionary) -> void:
 	mark_hotspot_viewed(hotspot_id)
 
 func _on_hotspot_triggered(row: Dictionary) -> void:
-	#region agent log
-	DebugSessionLog.write_debug("H4", "hotspot_layer.gd:_on_hotspot_triggered", "triggered", {
-		"hotspot_id": str(row.get("hotspot_id", "")),
-		"hotspot_type": str(row.get("hotspot_type", "")),
-		"open_modal": str(row.get("open_modal", "")),
-		"current_parent": _current_parent
-	})
-	#endregion
 	_mark_question_discovered(row)
 	var hotspot_type: String = str(row.get("hotspot_type", "normal"))
 	match hotspot_type:
@@ -494,16 +418,3 @@ func _scaled_rect(row: Dictionary, target_rect: Rect2, base_size: Vector2) -> Re
 			maxf(min_size, float(row.get("height", 1.0)) * sy)
 		)
 	)
-
-func _log_hs109_rect(hotspot: HotspotNode) -> void:
-	if not is_instance_valid(hotspot):
-		return
-	var gr: Rect2 = hotspot.get_global_rect()
-	#region agent log
-	DebugSessionLog.write_debug("P4", "hotspot_layer.gd:_log_hs109_rect", "hs_109_global_rect", {
-		"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y],
-		"expected_psd": [320, 152, 71, 147],
-		"root_pan_x": _root_pan_x,
-		"root_scene_size": [_root_scene_size.x, _root_scene_size.y]
-	})
-	#endregion

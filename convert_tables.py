@@ -227,6 +227,21 @@ TABLES = [
         "float_cols": [],
     },
     {
+        "base": "banner_config",
+        "src": "banner_config",
+        "out": "banner_config.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "tabtype",
+            "activedurationsec",
+            "activegranttype",
+            "activegrantamt",
+            "offlinedurationsec",
+            "offlinemaxsec",
+        ],
+        "float_cols": [],
+    },
+    {
         "base": "opinion_config",
         "src": "舆论配置表",
         "out": "opinion_config.json",

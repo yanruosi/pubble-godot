@@ -2,7 +2,6 @@ extends SceneTree
 
 ## 关卡底栏槽位 + 气泡关闭 自动化点击测试
 
-const DEBUG_LOG := "res://debug-0ae22b.log"
 const SLOT1_CENTER := Vector2(122.5, 653.0)
 const SCENE_CLICK := Vector2(640.0, 360.0)
 const HOTSPOT_CLICK := Vector2(375.0, 264.0)

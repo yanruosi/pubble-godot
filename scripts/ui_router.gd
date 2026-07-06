@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 
 enum PageId {
 	HOME,
@@ -58,6 +58,10 @@ func _init_managers() -> void:
 
 	if condition_checker != null and chapter_manager != null and save_manager != null:
 		condition_checker.setup(chapter_manager, save_manager)
+
+	var expose_manager: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose_manager != null:
+		expose_manager.on_game_loaded()
 
 
 func _connect_home_entry() -> void:

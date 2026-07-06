@@ -28,6 +28,9 @@ func _on_new_game_pressed() -> void:
 	if save_manager != null:
 		save_manager.reset_progress()
 		save_manager.boot_target = "home"
+	var expose_manager: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose_manager != null:
+		expose_manager.seed_tutorial_instance()
 	get_tree().change_scene_to_file(MAIN_UI_PATH)
 
 func _on_continue_pressed() -> void:

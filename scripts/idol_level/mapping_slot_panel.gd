@@ -52,24 +52,8 @@ func open_panel() -> void:
 	_render_rows()
 	_refresh_vocab_chips()
 	_refresh_all_blanks()
-	#region agent log
-	DebugSessionLog.write_debug("H10", "mapping_slot_panel.gd:open_panel", "slot_panel_open", {
-		"visible": visible,
-		"z_index": z_index,
-		"mouse_filter": mouse_filter
-	})
-	#endregion
-
 func close_panel(emit_signal := true) -> void:
 	_set_panel_active(false)
-	#region agent log
-	DebugSessionLog.write_debug("H12", "mapping_slot_panel.gd:close_panel", "slot_panel_close", {
-		"emit_signal": emit_signal,
-		"visible": visible,
-		"z_index": z_index,
-		"mouse_filter": mouse_filter
-	})
-	#endregion
 	if emit_signal:
 		closed.emit()
 

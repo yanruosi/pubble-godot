@@ -20,6 +20,13 @@ config/icon="res://icon.svg"
 ChapterManagerSingleton="*res://scripts/chapter_manager.gd"
 SaveManagerSingleton="*res://scripts/save_manager.gd"
 ConditionCheckerSingleton="*res://scripts/condition_checker.gd"
+EconomyManagerSingleton="*res://scripts/economy_manager.gd"
+ExposeManagerSingleton="*res://scripts/expose_manager.gd"
+InventoryManagerSingleton="*res://scripts/inventory_manager.gd"
+ShopManagerSingleton="*res://scripts/shop_manager.gd"
+ActivityManagerSingleton="*res://scripts/activity_manager.gd"
+TutorialControllerSingleton="*res://scripts/tutorial_controller.gd"
+DebugPanelSingleton="*res://scripts/debug_panel.gd"
 
 [display]
 

@@ -19,9 +19,6 @@ const PATH_LOVE := "res://art/mainui/postui/love.png"
 const PATH_COMMENT := "res://art/mainui/postui/comment.png"
 const PATH_SHOUCANG := "res://art/mainui/postui/shoucang.png"
 
-const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-17a2ce.log"
-const DEBUG_SESSION_ID := "17a2ce"
-
 @onready var _avatar_btn: TextureButton = $CardMargin/MainVBox/HeaderRow/AvatarBtn
 @onready var _name_label: Label = $CardMargin/MainVBox/HeaderRow/HeaderTexts/NameLabel
 @onready var _time_label: Label = $CardMargin/MainVBox/HeaderRow/HeaderTexts/TimeLabel
@@ -50,28 +47,6 @@ var _is_fans_layout: bool = false
 var _is_pinned: bool = false
 var _card_panel_style: StyleBoxFlat
 var _artist_postbg_tex: Texture2D
-
-
-#region agent log
-func _dbg17(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "post-fix") -> void:
-	var payload := {
-		"sessionId": DEBUG_SESSION_ID,
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if f == null:
-		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-#endregion
 
 
 func _ready() -> void:
@@ -144,7 +119,6 @@ func setup(enriched: Dictionary) -> void:
 		_apply_single_image_left_align()
 	_apply_layout_theme()
 	_apply_follow_action_visual()
-	call_deferred("debug_log_card_layout")
 
 
 # 帖子配图左对齐：控件宽度固定 350，避免在宽卡片内居中
@@ -241,50 +215,6 @@ func _apply_layout_theme() -> void:
 		fb.corner_radius_bottom_right = 8
 		fb.corner_radius_bottom_left = 8
 		_follow_bar.add_theme_stylebox_override("panel", fb)
-
-
-#region agent log
-func debug_log_card_layout() -> void:
-	if not is_inside_tree():
-		return
-	var card_rect := get_global_rect()
-	var card_center_x := card_rect.position.x + card_rect.size.x * 0.5
-	var avatar_center_x := _avatar_btn.global_position.x + _avatar_btn.size.x * 0.5 if _avatar_btn != null else -1.0
-	var image_center_x := -1.0
-	if _single_image != null and _single_image.visible:
-		image_center_x = _single_image.global_position.x + _single_image.size.x * 0.5
-	_dbg17(
-		"A",
-		"feed_post_card.gd:debug_log_card_layout",
-		"卡片内容水平对齐检测",
-		{
-			"card_global_rect": str(card_rect),
-			"card_center_x": card_center_x,
-			"avatar_center_x": avatar_center_x,
-			"avatar_offset_from_card_center": avatar_center_x - card_center_x if avatar_center_x >= 0.0 else "n/a",
-			"image_center_x": image_center_x,
-			"image_offset_from_card_center": image_center_x - card_center_x if image_center_x >= 0.0 else "n/a",
-			"single_image_size": str(_single_image.size) if _single_image != null else "n/a",
-			"single_image_visible": _single_image.visible if _single_image != null else false,
-			"placeholder_visible": _single_image_placeholder.visible if _single_image_placeholder != null else false,
-			"is_artist_layout": _is_artist_layout,
-			"is_fans_layout": _is_fans_layout,
-			"avatar_visible": _avatar_btn.visible if _avatar_btn != null else false
-		}
-	)
-	if _like_btn != null:
-		_dbg17(
-			"C",
-			"feed_post_card.gd:debug_log_card_layout",
-			"底部图标热区",
-			{
-				"like_btn_size": str(_like_btn.size),
-				"like_btn_min": str(_like_btn.custom_minimum_size),
-				"comment_icon_size": str(_comment_icon.size) if _comment_icon != null else "n/a",
-				"pin_btn_size": str(_pin_btn.size) if _pin_btn != null else "n/a"
-			}
-		)
-#endregion
 
 
 func _on_media_gui_input(event: InputEvent) -> void:

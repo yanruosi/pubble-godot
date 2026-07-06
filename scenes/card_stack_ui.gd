@@ -17,7 +17,6 @@ const ANIM_DURATION := 0.28
 const SWIPE_THRESHOLD := 45.0
 
 const CHAPTER_CARD_SCENE := preload("res://scenes/chapter_card.tscn")
-const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-fe0741.log"
 
 const STATE_LOCKED := 0
 const STATE_IN_PROGRESS := 1
@@ -31,27 +30,6 @@ var _current_index: int = 0
 var _drag_start_y: float = 0.0
 var _drag_start_pos := Vector2.ZERO
 var _dragging: bool = false
-
-#region agent log
-func _dbg(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "run1") -> void:
-	var payload := {
-		"sessionId": "fe0741",
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if f == null:
-		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-#endregion
 
 func setup(chapters_sorted: Array, save_manager: SaveManager) -> void:
 	_chapters = chapters_sorted.duplicate(true)
@@ -118,32 +96,14 @@ func _pick_default_index() -> int:
 		if recent_chapter_id > 0:
 			var recent_index := _find_index_by_chapter_id(recent_chapter_id)
 			if recent_index >= 0:
-				#region agent log
-				_dbg("H3", "card_stack_ui.gd:_pick_default_index", "pick recent chapter", {"recent_chapter_id": recent_chapter_id, "recent_index": recent_index})
-				#endregion
 				return recent_index
 
 	if _is_partial_unlock_state() and _save_manager != null:
 		var first_in_progress := _find_first_index_by_state(STATE_IN_PROGRESS)
 		if first_in_progress >= 0:
-			#region agent log
-			_dbg("H3", "card_stack_ui.gd:_pick_default_index", "pick first in progress", {"first_in_progress": first_in_progress})
-			#endregion
 			return first_in_progress
 
 	# 全锁或全解锁/已完成时，固定回到 order 最小的第一章。
-	#region agent log
-	_dbg(
-		"H3",
-		"card_stack_ui.gd:_pick_default_index",
-		"fallback to 0",
-		{
-			"chapters_size": _chapters.size(),
-			"partial_unlock_state": _is_partial_unlock_state(),
-			"recent_chapter_id": _save_manager.get_recent_opened_chapter_id() if _save_manager != null else -1
-		}
-	)
-	#endregion
 	return 0
 
 func _is_partial_unlock_state() -> bool:

@@ -41,34 +41,12 @@ var _completed_slots: Dictionary = {}
 var _progress_label: Label
 var _progress_arc: ProgressArcLayer
 
-const DEBUG_LOG_PATH := "res://debug-0ae22b.log"
-const DEBUG_SESSION_ID := "0ae22b"
-
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = 300
 	set_process_input(true)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
-	call_deferred("_log_slot_layout")
-
-func _log_slot_layout() -> void:
-	for slot_id in _slot_buttons.keys():
-		var hit: Control = _slot_buttons[slot_id]
-		if hit == null:
-			continue
-		var gr: Rect2 = hit.get_global_rect()
-		var icon: TextureRect = hit.get_node_or_null("Icon") as TextureRect
-		#region agent log
-		_debug_log("H1", "idol_bottom_bar.gd:_log_slot_layout", "slot_layout", {
-			"slot_id": str(slot_id),
-			"visible": hit.visible,
-			"unlocked": bool(_slot_unlocked.get(slot_id, false)),
-			"has_texture": icon != null and icon.texture != null,
-			"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y],
-			"bar_z_index": z_index
-		})
-		#endregion
 
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
@@ -82,16 +60,6 @@ func _input(event: InputEvent) -> void:
 			continue
 		var gr: Rect2 = hit.get_global_rect()
 		if gr.size.x > 1.0 and gr.has_point(click_pos):
-			#region agent log
-			_debug_log("H3", "idol_bottom_bar.gd:_input", "click_in_slot_rect", {
-				"slot_id": str(slot_id),
-				"click_pos": [click_pos.x, click_pos.y],
-				"global_rect": [gr.position.x, gr.position.y, gr.size.x, gr.size.y],
-				"visible": hit.visible,
-				"unlocked": bool(_slot_unlocked.get(slot_id, false))
-			})
-			_debug_log("H2", "idol_bottom_bar.gd:_input", "slot_pressed_via_input", {"slot_id": slot_id})
-			#endregion
 			set_active_slot(str(slot_id))
 			slot_pressed.emit(str(slot_id))
 			get_viewport().set_input_as_handled()
@@ -228,9 +196,6 @@ func _add_slot_button(slot_id: String, tex_path: String, rect: Rect2) -> void:
 			return
 		if not bool(_slot_unlocked.get(slot_id, false)):
 			return
-		#region agent log
-		_debug_log("H2", "idol_bottom_bar.gd:gui_input", "slot_gui_input", {"slot_id": slot_id})
-		#endregion
 		set_active_slot(slot_id)
 		slot_pressed.emit(slot_id)
 		hit.accept_event()
@@ -257,26 +222,6 @@ func _load_progress_tex() -> Texture2D:
 		return tex
 	push_warning("IdolBottomBar: 未找到 jindu_bg.png，回退使用 jinduui.png")
 	return _load_tex(TEX_PROGRESS_FALLBACK)
-
-#region agent log
-func _debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
-	var payload := {
-		"sessionId": DEBUG_SESSION_ID,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-#endregion
 
 class ProgressArcLayer extends Control:
 	var ratio: float = 0.0

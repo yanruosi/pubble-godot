@@ -167,11 +167,6 @@ func _input(event: InputEvent) -> void:
 			_tracking_pointer = false
 			_pan_gesture_active = false
 			if was_pan_gesture:
-				#region agent log
-				_pan_debug_log("H3", "scene_pan_controller.gd:_input", "mouse_handled_by_pan", {
-					"click_pos": [mb.position.x, mb.position.y]
-				})
-				#endregion
 				get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and _tracking_pointer and _dragging:
@@ -229,24 +224,12 @@ func _gui_input(event: InputEvent) -> void:
 		var mm := event as InputEventMouseMotion
 		_apply_drag_motion(mm.position, mm.relative.x)
 		if _pan_gesture_active:
-			#region agent log
-			DebugSessionLog.write_debug("H15", "scene_pan_controller.gd:_gui_input", "consume_mouse_pan", {
-				"drag_total_dx": _drag_total_dx,
-				"drag_total_dy": _drag_total_dy
-			})
-			#endregion
 			accept_event()
 		return
 	if event is InputEventScreenDrag and _dragging:
 		var sd := event as InputEventScreenDrag
 		_apply_drag_motion(sd.position, sd.relative.x)
 		if _pan_gesture_active:
-			#region agent log
-			DebugSessionLog.write_debug("H15", "scene_pan_controller.gd:_gui_input", "consume_touch_pan", {
-				"drag_total_dx": _drag_total_dx,
-				"drag_total_dy": _drag_total_dy
-			})
-			#endregion
 			accept_event()
 
 func _begin_drag(local_pos: Vector2) -> void:
@@ -329,25 +312,3 @@ func _apply_world_position() -> void:
 	_scene_world.position = Vector2(-roundf(_pan_x), 0.0)
 	pan_changed.emit(_pan_x, _scene_world.size)
 
-#region agent log
-const PAN_DEBUG_LOG_PATH := "res://debug-0ae22b.log"
-const PAN_DEBUG_SESSION_ID := "0ae22b"
-
-func _pan_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
-	var payload := {
-		"sessionId": PAN_DEBUG_SESSION_ID,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open(PAN_DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open(PAN_DEBUG_LOG_PATH, FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-#endregion

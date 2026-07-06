@@ -135,13 +135,15 @@ func _step_feed_artist() -> void:
 			_fail("feed_posts.json missing type 901 posts")
 
 	var cc := root.get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
-	if cc == null:
-		_fail("ConditionChecker missing")
+	var sm := root.get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if cc == null or sm == null:
+		_fail("ConditionChecker or SaveManager missing")
 		return
-	if not cc.is_condition_met(4001):
-		_fail("condition 4001 should pass on new game")
+	sm.intellevel = 0
+	if cc.is_feed_post_visible({"condition_id": 4}):
+		_fail("type5 should hide artist post at intel lv0")
 	else:
-		_ok("condition 4001 passes for ch1_l01 unlock")
+		_ok("type5 hides artist post until intel level")
 
 
 func _step_level_scene() -> void:

@@ -45,7 +45,6 @@ var _default_status := "拖动词条填入卷轴，全部填满后自动揭晓�
 var _drag_overlay: CanvasLayer
 var _drag_ghost: Control
 var _drag_grab_offset := Vector2.ZERO
-var _drag_ghost_log_timer := 0.0
 var _pool_vocab_order: Array[String] = []
 
 func _ready() -> void:
@@ -81,25 +80,9 @@ func open_panel() -> void:
 	_status_label.text = _default_status
 	_refresh_vocab_chips()
 	_refresh_all_blanks()
-	call_deferred("_log_layout_metrics")
-	#region agent log
-	DebugSessionLog.write_debug("H10", "scroll_slot_panel.gd:open_panel", "slot_panel_open", {
-		"visible": visible,
-		"z_index": z_index,
-		"mouse_filter": mouse_filter
-	})
-	#endregion
 
 func close_panel(emit_signal := true) -> void:
 	_set_panel_active(false)
-	#region agent log
-	DebugSessionLog.write_debug("H12", "scroll_slot_panel.gd:close_panel", "slot_panel_close", {
-		"emit_signal": emit_signal,
-		"visible": visible,
-		"z_index": z_index,
-		"mouse_filter": mouse_filter
-	})
-	#endregion
 	if emit_signal:
 		closed.emit()
 
@@ -191,23 +174,7 @@ func _build_ui() -> void:
 func _process(_delta: float) -> void:
 	if _drag_ghost == null:
 		return
-	var mouse_global := get_viewport().get_mouse_position()
-	_drag_ghost.global_position = mouse_global - _drag_grab_offset
-	_drag_ghost_log_timer += _delta
-	if _drag_ghost_log_timer < 0.15:
-		return
-	_drag_ghost_log_timer = 0.0
-	#region agent log
-	_debug_write("drag_ghost_pos", {
-		"runId": "drag-ghost-v1",
-		"hypothesisId": "H1-H2",
-		"mouse": [mouse_global.x, mouse_global.y],
-		"ghost_global": [_drag_ghost.global_position.x, _drag_ghost.global_position.y],
-		"grab_offset": [_drag_grab_offset.x, _drag_grab_offset.y],
-		"overlay_layer": DRAG_OVERLAY_LAYER,
-		"vocab_id": _vocab_drag_vocab_id
-	})
-	#endregion
+	_drag_ghost.global_position = get_viewport().get_mouse_position() - _drag_grab_offset
 
 func _on_dim_gui_input(event: InputEvent) -> void:
 	_try_dismiss_on_outside_click(event, "dim")
@@ -222,14 +189,6 @@ func _try_dismiss_on_outside_click(event: InputEvent, source: String) -> void:
 		return
 	var local_pos := get_local_mouse_position()
 	var keep_open := _should_keep_open_on_click(local_pos)
-	#region agent log
-	_debug_write("outside_click", {
-		"runId": "dismiss-fix",
-		"source": source,
-		"local_pos": [local_pos.x, local_pos.y],
-		"keep_open": keep_open
-	})
-	#endregion
 	if keep_open:
 		return
 	close_panel()
@@ -313,22 +272,11 @@ func _sync_pool_vocab_order() -> void:
 			continue
 		_pool_vocab_order.append(vocab_id)
 
-func _append_pool_vocab(vocab_id: String, reason: String = "") -> void:
+func _append_pool_vocab(vocab_id: String, _reason: String = "") -> void:
 	if vocab_id.is_empty():
 		return
-	var before: Array = _pool_vocab_order.duplicate()
 	_pool_vocab_order.erase(vocab_id)
 	_pool_vocab_order.append(vocab_id)
-	#region agent log
-	_debug_write("pool_order_append", {
-		"runId": "pool-order-v1",
-		"hypothesisId": "H1",
-		"vocab_id": vocab_id,
-		"reason": reason,
-		"before": before,
-		"after": _pool_vocab_order.duplicate()
-	})
-	#endregion
 
 func _refresh_vocab_chips() -> void:
 	if _vocab_chip_layer == null:
@@ -339,7 +287,6 @@ func _refresh_vocab_chips() -> void:
 		return
 	_sync_pool_vocab_order()
 	var slot_index := 0
-	var chip_layout: Array = []
 	for vocab_id in _pool_vocab_order:
 		if _is_vocab_placed(vocab_id):
 			continue
@@ -355,14 +302,7 @@ func _refresh_vocab_chips() -> void:
 		if vocab_id == _selected_vocab_id:
 			chip.modulate = Color(0.82, 0.95, 1.0, 1)
 		_vocab_chip_layer.add_child(chip)
-		chip_layout.append({
-			"vocab_id": vocab_id,
-			"slot": slot_index,
-			"pos": [slot_pos.x, slot_pos.y],
-			"size": [CHIP_SIZE.x, CHIP_SIZE.y]
-		})
 		slot_index += 1
-	call_deferred("_log_chip_layout", chip_layout)
 
 func _visible_pool_order() -> Array:
 	var order: Array = []
@@ -376,7 +316,6 @@ func _refresh_all_blanks() -> void:
 		var blank: SlotDrag.SlotBlankSlot = _blank_slots[row_id]
 		if blank != null:
 			blank.refresh_display()
-	call_deferred("_log_blank_widths")
 
 func _chip_texture_for_vocab(vocab_id: String) -> String:
 	if _vocab_bank == null:
@@ -400,23 +339,10 @@ func _chip_texture_for_tag(tag: String) -> String:
 
 func _begin_vocab_drag(vocab_id: String) -> bool:
 	if not _vocab_drag_vocab_id.is_empty() and _vocab_drag_vocab_id != vocab_id:
-		#region agent log
-		_debug_write("vocab_drag_rejected", {
-			"runId": "drag-fix-v2",
-			"requested": vocab_id,
-			"active": _vocab_drag_vocab_id
-		})
-		#endregion
 		return false
 	_vocab_drag_vocab_id = vocab_id
 	_vocab_drag_release_block = true
 	Input.set_default_cursor_shape(Input.CURSOR_DRAG)
-	#region agent log
-	_debug_write("vocab_drag_begin", {
-		"runId": "drag-fix-v2",
-		"vocab_id": vocab_id
-	})
-	#endregion
 	return true
 
 func _show_drag_ghost(vocab_id: String, grab_offset: Vector2, chip_size: Vector2, tex_path: String = "") -> void:
@@ -427,18 +353,7 @@ func _show_drag_ghost(vocab_id: String, grab_offset: Vector2, chip_size: Vector2
 	_drag_grab_offset = grab_offset
 	_drag_overlay.add_child(_drag_ghost)
 	_drag_ghost.global_position = get_viewport().get_mouse_position() - _drag_grab_offset
-	_drag_ghost_log_timer = 0.0
 	set_process(true)
-	#region agent log
-	_debug_write("drag_ghost_show", {
-		"runId": "drag-ghost-v1",
-		"hypothesisId": "H1",
-		"vocab_id": vocab_id,
-		"text": text,
-		"size": [chip_size.x, chip_size.y],
-		"overlay_layer": DRAG_OVERLAY_LAYER
-	})
-	#endregion
 
 func _hide_drag_ghost() -> void:
 	if _drag_ghost != null:
@@ -471,15 +386,6 @@ func _build_drag_ghost_control(text: String, tex_path: String, chip_size: Vector
 func _can_start_vocab_drag(vocab_id: String) -> bool:
 	return _vocab_drag_vocab_id.is_empty() or _vocab_drag_vocab_id == vocab_id
 
-func _debug_chip_drag_start(vocab_id: String, source: String) -> void:
-	#region agent log
-	_debug_write("chip_drag_start", {
-		"runId": "drag-fix-v2",
-		"vocab_id": vocab_id,
-		"source": source
-	})
-	#endregion
-
 func _end_vocab_drag() -> void:
 	if _vocab_drag_vocab_id.is_empty():
 		return
@@ -487,12 +393,6 @@ func _end_vocab_drag() -> void:
 	_vocab_drag_vocab_id = ""
 	_hide_drag_ghost()
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
-	#region agent log
-	_debug_write("vocab_drag_end", {
-		"runId": "drag-fix-v2",
-		"vocab_id": ended_id
-	})
-	#endregion
 	call_deferred("_clear_vocab_drag_release_block")
 
 func _clear_vocab_drag_release_block() -> void:
@@ -592,96 +492,3 @@ func _is_vocab_placed(vocab_id: String) -> bool:
 
 func _on_vocab_bank_changed(_collected_count: int, _total_count: int) -> void:
 	_refresh_vocab_chips()
-
-func _log_layout_metrics() -> void:
-	if not visible or _text_flow == null:
-		return
-	var text_area: Control = _text_flow.get_parent() as Control
-	var flow_size: Vector2 = _text_flow.get_combined_minimum_size()
-	var child_sizes: Array = []
-	for child in _text_flow.get_children():
-		if child is Control:
-			var c := child as Control
-			child_sizes.append({
-				"name": c.name,
-				"size": [c.size.x, c.size.y],
-				"min": [c.custom_minimum_size.x, c.custom_minimum_size.y]
-			})
-	var chip_sample: Dictionary = {}
-	if _vocab_chip_layer != null and _vocab_chip_layer.get_child_count() > 0:
-		var chip := _vocab_chip_layer.get_child(0) as Control
-		if chip != null:
-			chip_sample = {
-				"size": [chip.size.x, chip.size.y],
-				"pos": [chip.position.x, chip.position.y]
-			}
-	#region agent log
-	_debug_write("layout_metrics", {
-		"runId": "post-fix",
-		"hypothesisId": "H1-H5",
-		"mystery_font_pt": MYSTERY_FONT_SIZE,
-		"mystery_blank_size": [MYSTERY_BLANK_SIZE.x, MYSTERY_BLANK_SIZE.y],
-		"chip_size_const": [CHIP_SIZE.x, CHIP_SIZE.y],
-		"text_area_rect": [TEXT_AREA_RECT.size.x, TEXT_AREA_RECT.size.y],
-		"text_area_clip": text_area.clip_contents if text_area != null else null,
-		"flow_combined_min": [flow_size.x, flow_size.y],
-		"flow_child_count": _text_flow.get_child_count(),
-		"flow_children": child_sizes,
-		"pool_chip_sample": chip_sample,
-		"overflow_y": flow_size.y - TEXT_AREA_RECT.size.y
-	})
-	#endregion
-
-func _debug_write(message: String, data: Dictionary) -> void:
-	var payload := {
-		"sessionId": "45c98c",
-		"location": "scroll_slot_panel.gd:_log_layout_metrics",
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open("res://debug-45c98c.log", FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open("res://debug-45c98c.log", FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-
-func _log_blank_widths() -> void:
-	if not visible:
-		return
-	var samples: Array = []
-	for row_id in _blank_slots.keys():
-		var blank: SlotDrag.SlotBlankSlot = _blank_slots[row_id] as SlotDrag.SlotBlankSlot
-		if blank == null:
-			continue
-		var vocab_id: String = str(_fills.get(row_id, ""))
-		var text: String = _drag_vocab_text(vocab_id) if not vocab_id.is_empty() else ""
-		samples.append({
-			"row_id": row_id,
-			"text": text,
-			"width": blank.size.x,
-			"target_w": _mystery_blank_width_for_text(text) if not text.is_empty() else MYSTERY_BLANK_SIZE.x,
-			"half_char_pad": _mystery_half_char_width()
-		})
-	#region agent log
-	_debug_write("blank_widths", {
-		"runId": "padding-dismiss",
-		"samples": samples
-	})
-	#endregion
-
-func _log_chip_layout(chip_layout: Array) -> void:
-	if not visible:
-		return
-	#region agent log
-	_debug_write("chip_layout", {
-		"runId": "psd-grid",
-		"slots": chip_layout,
-		"pool_order": _visible_pool_order(),
-		"psd_origin": [CHIP_GRID_ORIGIN.x, CHIP_GRID_ORIGIN.y],
-		"chip_size": [CHIP_SIZE.x, CHIP_SIZE.y]
-	})
-	#endregion

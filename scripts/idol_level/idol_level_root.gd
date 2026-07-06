@@ -302,15 +302,6 @@ func _on_hotspot_popup_requested(text: String, hotspot: Dictionary) -> void:
 func _on_hotspot_modal_opened(modal_id: String, title: String, asset_path: String, popup_layout: String, hotspot: Dictionary) -> void:
 	var design_size: Vector2 = HotspotLayer.coord_base_from_row(hotspot)
 	var design_anchor: Vector2 = HotspotLayer.anchor_from_row(hotspot)
-	#region agent log
-	DebugSessionLog.write_debug("P2", "idol_level_root.gd:_on_hotspot_modal_opened", "modal_open_params", {
-		"hotspot_id": str(hotspot.get("hotspot_id", "")),
-		"modal_id": modal_id,
-		"design_size": [design_size.x, design_size.y],
-		"design_anchor": [design_anchor.x, design_anchor.y],
-		"editor_note": str(hotspot.get("editor_note", ""))
-	})
-	#endregion
 	popup_layer.show_modal(modal_id, title, asset_path, popup_layout, design_size, design_anchor)
 	scene_pan.set_pan_locked(true)
 
@@ -376,18 +367,6 @@ func _resolve_bubble_text(text: String, hotspot: Dictionary) -> String:
 	return str(vocab_row.get("text", text))
 
 func _on_popup_closed(closed_modal_id: String) -> void:
-	#region agent log
-	DebugSessionLog.write_debug("H2", "idol_level_root.gd:_on_popup_closed", "popup_closed_signal_before_restore", {
-		"closed_modal_id": closed_modal_id,
-		"popup_has_overlay": popup_layer.has_overlay(),
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer(),
-		"hotspot_visible": hotspot_layer.visible,
-		"scroll_visible": scroll_panel.visible,
-		"identity_visible": identity_panel.visible,
-		"mapping_visible": mapping_panel.visible
-	})
-	#endregion
 	if popup_layer.has_overlay():
 		popup_layer.close_overlay()
 	_apply_modal_close_events(closed_modal_id)
@@ -403,17 +382,6 @@ func _on_popup_closed(closed_modal_id: String) -> void:
 			restore.get("design_size", Vector2.ZERO)
 		)
 	_sync_pan_lock()
-	#region agent log
-	DebugSessionLog.write_debug("H2", "idol_level_root.gd:_on_popup_closed", "popup_closed_signal_after_restore", {
-		"closed_modal_id": closed_modal_id,
-		"parent_layer": parent_layer,
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer(),
-		"hotspot_visible": hotspot_layer.visible,
-		"pan_locked": scene_pan.is_pan_locked() if scene_pan.has_method("is_pan_locked") else null
-	})
-	#endregion
-
 func _apply_modal_close_events(closed_modal_id: String) -> void:
 	match closed_modal_id:
 		"modal_poster_lee", "modal_102":
@@ -427,20 +395,6 @@ func _apply_modal_close_events(closed_modal_id: String) -> void:
 func _on_bottom_slot_pressed(slot_id: String) -> void:
 	# 打开槽位前先关掉场景气泡，避免与底栏操作叠在一起
 	popup_layer.hide_all()
-	#region agent log
-	_agent_debug_log("H2", "idol_level_root.gd:_on_bottom_slot_pressed", "slot_signal_received", {"slot_id": slot_id})
-	DebugSessionLog.write_debug("H13", "idol_level_root.gd:_on_bottom_slot_pressed", "before_open_slot", {
-		"slot_id": slot_id,
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer(),
-		"scroll_visible": scroll_panel.visible,
-		"identity_visible": identity_panel.visible,
-		"mapping_visible": mapping_panel.visible,
-		"bottom_z_index": bottom_bar.z_index,
-		"scroll_z_index": scroll_panel.z_index,
-		"popup_z_index": popup_layer.z_index
-	})
-	#endregion
 	bottom_bar.set_active_slot(slot_id)
 	match slot_id:
 		"slot1":
@@ -458,27 +412,7 @@ func _on_bottom_slot_pressed(slot_id: String) -> void:
 			identity_panel.close_panel(false)
 			mapping_panel.open_panel()
 	_sync_hotspot_layer_visibility()
-	#region agent log
-	DebugSessionLog.write_debug("H13", "idol_level_root.gd:_on_bottom_slot_pressed", "after_open_slot", {
-		"slot_id": slot_id,
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer(),
-		"scroll_visible": scroll_panel.visible,
-		"identity_visible": identity_panel.visible,
-		"mapping_visible": mapping_panel.visible
-	})
-	#endregion
-
 func _on_slot_panel_closed() -> void:
-	#region agent log
-	DebugSessionLog.write_debug("H12", "idol_level_root.gd:_on_slot_panel_closed", "slot_panel_closed_signal", {
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer(),
-		"scroll_visible": scroll_panel.visible,
-		"identity_visible": identity_panel.visible,
-		"mapping_visible": mapping_panel.visible
-	})
-	#endregion
 	bottom_bar.set_active_slot("")
 	_sync_hotspot_layer_visibility()
 	_flush_level_progress()
@@ -488,14 +422,6 @@ func _sync_hotspot_layer_visibility() -> void:
 		return
 	var slot_open: bool = scroll_panel.visible or identity_panel.visible or mapping_panel.visible
 	hotspot_layer.visible = not slot_open
-	#region agent log
-	DebugSessionLog.write_debug("H14", "idol_level_root.gd:_sync_hotspot_layer_visibility", "sync_visibility", {
-		"slot_open": slot_open,
-		"hotspot_visible": hotspot_layer.visible,
-		"popup_modal_id": popup_layer.get_current_modal_id(),
-		"hotspot_layer": hotspot_layer.get_current_layer()
-	})
-	#endregion
 	_sync_pan_lock()
 
 func _sync_pan_lock() -> void:
@@ -606,13 +532,34 @@ func _apply_completion() -> void:
 	if _save_manager == null:
 		return
 	var before_completed: bool = _save_manager.is_level_completed(level_id)
-	print("【通关存档自检】【%s】通关前 completed=%s" % [level_id, str(before_completed)])
 	_first_clear_this_finish = not before_completed
 	_is_replay_session = false
 	_save_manager.set_level_progress(level_id, _build_level_progress_patch())
+	if _first_clear_this_finish:
+		_grant_level_rewards()
+		var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
+		if tutor != null:
+			tutor.notify_level_cleared()
 	_save_manager.mark_level_completed(level_id, true)
-	print("【通关存档自检】【%s】通关后 completed=%s" % [level_id, str(_save_manager.is_level_completed(level_id))])
 	_mark_chapter_completed_if_all_done()
+
+
+func _grant_level_rewards() -> void:
+	var economy: EconomyManager = get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
+	if economy == null or _chapter_manager == null:
+		return
+	var row: Dictionary = _chapter_manager.get_level_by_id(level_id)
+	if row.is_empty():
+		return
+	var gs: int = int(row.get("grantstars", 0))
+	var gf: int = int(row.get("grantfp", 0))
+	var gi: int = int(row.get("grantintel", 0))
+	if gs > 0:
+		economy.add_currency(23, gs, "level_clear")
+	if gf > 0:
+		economy.add_currency(22, gf, "level_clear")
+	if gi > 0:
+		economy.add_currency(24, gi, "level_clear")
 
 func _mark_chapter_completed_if_all_done() -> void:
 	if _save_manager == null or _chapter_manager == null:
@@ -841,25 +788,3 @@ func _on_menu_return_feed_pressed() -> void:
 		})
 	get_tree().change_scene_to_file(MAIN_UI_PATH)
 
-#region agent log
-const AGENT_DEBUG_LOG_PATH := "res://debug-0ae22b.log"
-const AGENT_DEBUG_SESSION_ID := "0ae22b"
-
-func _agent_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
-	var payload := {
-		"sessionId": AGENT_DEBUG_SESSION_ID,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open(AGENT_DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open(AGENT_DEBUG_LOG_PATH, FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-#endregion

@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "itemid": 1001,
+    "name": "教程普通专辑",
+    "category": 1,
+    "stacklimit": 99,
+    "tradable": 0
+  }
+]

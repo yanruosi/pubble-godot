@@ -127,16 +127,6 @@ func _realign_carousel_after_show() -> void:
 	_cache_card_positions_and_pivots()
 	_reset_carousel_layout_to_bases()
 	_apply_carousel_rest_visual()
-	#region agent log
-	_dbg_e48(
-		"H2",
-		"level_select_page.gd:_realign_carousel_after_show",
-		"carousel realigned",
-		_carousel_layout_snapshot()
-	)
-	#endregion
-
-
 func _ready() -> void:
 	back_button.pressed.connect(func() -> void: close_requested.emit())
 	action_button.pressed.connect(_on_action_pressed)
@@ -154,14 +144,6 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and visible and _chapter_id > 0:
-		#region agent log
-		_dbg_e48(
-			"H1",
-			"level_select_page.gd:_notification",
-			"level select became visible",
-			_carousel_layout_snapshot()
-		)
-		#endregion
 		_reset_carousel_interaction_state()
 		call_deferred("_realign_carousel_after_show")
 
@@ -256,51 +238,7 @@ func _apply_carousel_drag_visual() -> void:
 			center_card.z_index = 4
 	_apply_third_layer_preview(raw)
 	if foreground_side != _last_foreground_side:
-		#region agent log
-		_dbg(
-			"H3",
-			"level_select_page.gd:_apply_carousel_drag_visual",
-			"foreground side changed",
-			{
-				"raw_offset": raw,
-				"u": u,
-				"foreground_side": foreground_side,
-				"threshold": FOREGROUND_SWAP_THRESHOLD,
-				"left_scale": left_card.scale.x,
-				"center_scale": center_card.scale.x,
-				"right_scale": right_card.scale.x,
-				"left_z": left_card.z_index,
-				"center_z": center_card.z_index,
-				"right_z": right_card.z_index
-			}
-		)
-		#endregion
 		_last_foreground_side = foreground_side
-	if abs_u > 0.35 and int(Time.get_ticks_msec()) % 180 < 16:
-		#region agent log
-		_dbg(
-			"H5",
-			"level_select_page.gd:_apply_carousel_drag_visual",
-			"drag layer snapshot",
-			{
-				"current_index": _current_index,
-				"center_idx": center_idx,
-				"left_idx": left_idx,
-				"right_idx": right_idx,
-				"left_visible": left_card.visible,
-				"right_visible": right_card.visible,
-				"left_scale": left_card.scale.x,
-				"center_scale": center_card.scale.x,
-				"right_scale": right_card.scale.x,
-				"left_pos_x": left_card.position.x,
-				"center_pos_x": center_card.position.x,
-				"right_pos_x": right_card.position.x,
-				"u": u,
-				"raw_offset": raw
-			}
-		)
-		#endregion
-
 
 func _apply_third_layer_preview(raw: float) -> void:
 	if _far_left_card == null or _far_right_card == null:
@@ -414,16 +352,6 @@ func setup(
 	if _save_manager != null:
 		_save_manager.set_recent_opened_chapter_id(_chapter_id)
 
-	#region agent log
-	var snap_setup := _carousel_layout_snapshot()
-	snap_setup["chapter_id"] = _chapter_id
-	_dbg_e48(
-		"H1",
-		"level_select_page.gd:setup",
-		"setup entry before carousel reset",
-		snap_setup
-	)
-	#endregion
 	_reset_carousel_interaction_state()
 	_refresh()
 	call_deferred("_realign_carousel_after_show")
@@ -438,16 +366,6 @@ func focus_level_by_id(level_id: String) -> void:
 		return
 	for i in range(_levels.size()):
 		if str(_levels[i].get("levelid", "")) == level_id:
-			#region agent log
-			var snap_focus := _carousel_layout_snapshot()
-			snap_focus["focus_level_id"] = level_id
-			_dbg_e48(
-				"H4",
-				"level_select_page.gd:focus_level_by_id",
-				"focus before realign",
-				snap_focus
-			)
-			#endregion
 			_reset_carousel_interaction_state()
 			_current_index = i
 			_refresh()
@@ -603,73 +521,17 @@ func _is_level_unlocked_for_dict(level: Dictionary) -> bool:
 	if level.is_empty():
 		return false
 	if not _is_chapter_unlocked():
-		#region agent log
-		_dbg8(
-			"H5",
-			"level_select_page.gd:_is_level_unlocked_for_dict",
-			"locked because chapter is not unlocked",
-			{
-				"level_id": str(level.get("levelid", "")),
-				"chapter_id": _chapter_id
-			}
-		)
-		#endregion
 		return false
 	var level_id: String = str(level.get("levelid", ""))
 	if _save_manager != null:
 		if _save_manager.is_level_unlocked(level_id) or _save_manager.is_level_completed(level_id):
-			#region agent log
-			_dbg8(
-				"H5",
-				"level_select_page.gd:_is_level_unlocked_for_dict",
-				"unlocked by save flags",
-				{
-					"level_id": level_id,
-					"is_level_unlocked": _save_manager.is_level_unlocked(level_id),
-					"is_level_completed": _save_manager.is_level_completed(level_id)
-				}
-			)
-			#endregion
 			return true
 	var condition_id: int = int(level.get("unlockconditionid", 0))
 	if condition_id <= 0:
-		#region agent log
-		_dbg8(
-			"H5",
-			"level_select_page.gd:_is_level_unlocked_for_dict",
-			"unlocked because no condition",
-			{
-				"level_id": level_id
-			}
-		)
-		#endregion
 		return true
 	if _condition_checker == null:
-		#region agent log
-		_dbg8(
-			"H5",
-			"level_select_page.gd:_is_level_unlocked_for_dict",
-			"locked because condition_checker missing",
-			{
-				"level_id": level_id,
-				"condition_id": condition_id
-			}
-		)
-		#endregion
 		return false
 	var condition_pass: bool = _condition_checker.is_level_condition_met(condition_id, level, _levels)
-	#region agent log
-	_dbg8(
-		"H5",
-		"level_select_page.gd:_is_level_unlocked_for_dict",
-		"condition checker result",
-		{
-			"level_id": level_id,
-			"condition_id": condition_id,
-			"pass": condition_pass
-		}
-	)
-	#endregion
 	return condition_pass
 
 
@@ -688,19 +550,6 @@ func _show_level_locked_prompt(level: Dictionary, for_center_card: bool = false)
 		text = _condition_checker.get_fail_text(condition_id)
 	if text.is_empty():
 		text = "该关卡尚未解锁"
-	#region agent log
-	_dbg8(
-		"H6",
-		"level_select_page.gd:_show_level_locked_prompt",
-		"show locked bubble",
-		{
-			"level_id": str(level.get("levelid", "")),
-			"for_center_card": for_center_card,
-			"condition_id": condition_id,
-			"text": text
-		}
-	)
-	#endregion
 	condition_bubble_label.text = text
 	condition_bubble.visible = true
 
@@ -772,17 +621,6 @@ func _on_center_card_gui_input(event: InputEvent) -> void:
 			_drag_start_x = mb.position.x
 		var is_click: bool = absf(mb.position.x - _drag_start_x) < 12.0
 		if mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed and is_click:
-			#region agent log
-			_dbg8(
-				"H6",
-				"level_select_page.gd:_on_center_card_gui_input",
-				"center card clicked",
-				{
-					"level_id": str(_current_level().get("levelid", "")),
-					"is_unlocked": _is_current_level_unlocked()
-				}
-			)
-			#endregion
 			if _is_current_level_unlocked():
 				_start_current_level()
 			else:
@@ -793,17 +631,6 @@ func _on_center_card_gui_input(event: InputEvent) -> void:
 			_drag_start_x = touch.position.x
 		var is_tap: bool = absf(touch.position.x - _drag_start_x) < 12.0
 		if not touch.pressed and is_tap:
-			#region agent log
-			_dbg8(
-				"H6",
-				"level_select_page.gd:_on_center_card_gui_input",
-				"center card tapped (touch)",
-				{
-					"level_id": str(_current_level().get("levelid", "")),
-					"is_unlocked": _is_current_level_unlocked()
-				}
-			)
-			#endregion
 			if _is_current_level_unlocked():
 				_start_current_level()
 			else:
@@ -811,21 +638,6 @@ func _on_center_card_gui_input(event: InputEvent) -> void:
 
 
 func _on_carousel_drag_end() -> void:
-	#region agent log
-	_dbg(
-		"H4",
-		"level_select_page.gd:_on_carousel_drag_end",
-		"drag end snapshot",
-		{
-			"offset": _live_drag_offset,
-			"swipe_threshold": SWIPE_THRESHOLD,
-			"foreground_side": _last_foreground_side,
-			"left_z": left_card.z_index,
-			"center_z": center_card.z_index,
-			"right_z": right_card.z_index
-		}
-	)
-	#endregion
 	if _levels.size() <= 1:
 		_kill_carousel_tween()
 		_live_drag_offset = 0.0

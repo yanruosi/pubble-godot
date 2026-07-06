@@ -2,7 +2,6 @@ extends SceneTree
 
 ## 验证：从左侧拖回词库时，词条追加到右侧末尾（非字母重排）
 
-const DEBUG_LOG := "res://debug-45c98c.log"
 
 
 func _init() -> void:

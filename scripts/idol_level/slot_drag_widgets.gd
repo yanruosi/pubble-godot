@@ -131,9 +131,6 @@ class SlotVocabChip extends PanelContainer:
 				return
 			_apply_drag_pickup_visual()
 			_owner_call(owner_panel, "_show_drag_ghost", [vocab_id, _press_pos, PSD_CHIP_SIZE, tex_path])
-			#region agent log
-			_owner_call(owner_panel, "_debug_chip_drag_start", [vocab_id, "pool"])
-			#endregion
 			force_drag({"vocab_id": vocab_id, "from_row_id": ""}, _make_drag_preview())
 
 
@@ -269,9 +266,6 @@ class SlotBlankSlot extends PanelContainer:
 			if SlotVocabChip._owner_has(owner_panel, "_chip_texture_for_vocab"):
 				tex_path = str(owner_panel.call("_chip_texture_for_vocab", filled_id))
 			SlotVocabChip._owner_call(owner_panel, "_show_drag_ghost", [filled_id, _press_pos, size, tex_path])
-			#region agent log
-			SlotVocabChip._owner_call(owner_panel, "_debug_chip_drag_start", [filled_id, row_id])
-			#endregion
 			force_drag({"vocab_id": filled_id, "from_row_id": row_id}, SlotVocabChip._invisible_drag_preview())
 
 	func _can_drop_data(at_position: Vector2, data: Variant) -> bool:

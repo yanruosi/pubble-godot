@@ -40,6 +40,10 @@ var _bubble_dismiss_canvas: CanvasLayer
 var _bubble_dismiss_catcher: ColorRect
 var _bubble_on_canvas := false
 
+const Z_INDEX_DEFAULT := 120
+const Z_INDEX_BUBBLE_TOP := 350
+const BUBBLE_DISMISS_CANVAS_LAYER := 400
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	z_index = Z_INDEX_DEFAULT
@@ -75,14 +79,6 @@ func show_modal(
 	_modal_center.visible = true
 	_apply_asset_display(title, asset_path, _base_design_size)
 	_sync_base_dismiss_rect(modal_id)
-	#region agent log
-	DebugSessionLog.write("H1", "idol_popup_panel.gd:show_modal", "base_modal_opened", {
-		"modal_id": modal_id,
-		"design_size": [design_size.x, design_size.y],
-		"design_anchor": [design_anchor.x, design_anchor.y],
-		"layout": layout
-	})
-	#endregion
 	call_deferred("_refresh_asset_layout")
 
 func set_dismiss_outside_modals(modals: Dictionary) -> void:
@@ -103,24 +99,6 @@ func show_bubble(text: String, keep_modal: bool = false) -> void:
 		z_index = Z_INDEX_BUBBLE_TOP
 		set_process_unhandled_input(true)
 		_show_root_bubble_dismiss_canvas()
-	#region agent log
-	DebugSessionLog.write_debug("H9", "idol_popup_panel.gd:show_bubble", "bubble_visible", {
-		"keep_modal": keep_modal,
-		"popup_z_index": z_index,
-		"dismiss_z_index": _dismiss_rect.z_index,
-		"bubble_z_index": _bubble_panel.z_index,
-		"base_modal_id": _base_modal_id,
-		"overlay_modal_id": _overlay_modal_id
-	})
-	_debug_log("H5", "idol_popup_panel.gd:show_bubble", "bubble_shown", {
-		"keep_modal": keep_modal,
-		"bubble_only": _bubble_only,
-		"bubble_visible": _bubble_panel.visible,
-		"dismiss_visible": _dismiss_rect.visible,
-		"dismiss_mouse_filter": _dismiss_rect.mouse_filter,
-		"unhandled_input_enabled": is_processing_unhandled_input()
-	})
-	#endregion
 	if keep_modal:
 		return
 	_current_modal_id = ""
@@ -158,15 +136,6 @@ func close_base_modal() -> void:
 	if _base_modal_id.is_empty() and _current_modal_id.is_empty():
 		return
 	var closed_modal_id: String = _base_modal_id if not _base_modal_id.is_empty() else _current_modal_id
-	#region agent log
-	DebugSessionLog.write_debug("H2", "idol_popup_panel.gd:close_base_modal", "close_base_modal", {
-		"closed_modal_id": closed_modal_id,
-		"current_modal_id": _current_modal_id,
-		"overlay_modal_id": _overlay_modal_id,
-		"bubble_visible": _bubble_panel.visible if _bubble_panel != null else false,
-		"dismiss_visible": _dismiss_rect.visible if _dismiss_rect != null else false
-	})
-	#endregion
 	hide_all()
 	popup_closed.emit(closed_modal_id)
 	close_requested.emit()
@@ -197,12 +166,6 @@ func hide_all() -> void:
 		_bubble_panel.visible = false
 	_hide_root_bubble_dismiss_canvas()
 	z_index = Z_INDEX_DEFAULT
-	#region agent log
-	_debug_log("H6", "idol_popup_panel.gd:hide_all", "bubble_hidden", {
-		"bubble_visible": _bubble_panel.visible if _bubble_panel != null else false,
-		"dismiss_visible": _dismiss_rect.visible if _dismiss_rect != null else false
-	})
-	#endregion
 	if _overlay_center != null:
 		_overlay_center.visible = false
 	_hide_overlay()
@@ -211,14 +174,6 @@ func close_overlay() -> void:
 	if _overlay_modal_id.is_empty():
 		return
 	var closed_id: String = _overlay_modal_id
-	#region agent log
-	DebugSessionLog.write_debug("H2", "idol_popup_panel.gd:close_overlay", "close_overlay", {
-		"closed_overlay_id": closed_id,
-		"base_modal_id": _base_modal_id,
-		"current_modal_id": _current_modal_id,
-		"dismiss_visible": _dismiss_rect.visible if _dismiss_rect != null else false
-	})
-	#endregion
 	_hide_overlay()
 	if _base_modal_id.is_empty():
 		set_process_unhandled_input(false)
@@ -432,21 +387,6 @@ func _layout_overlay_children_fill() -> void:
 	if _overlay_image != null and _overlay_image.visible:
 		_overlay_image.set_anchors_preset(Control.PRESET_FULL_RECT)
 		_overlay_image.set_offsets_preset(Control.PRESET_FULL_RECT)
-	#region agent log
-	DebugSessionLog.write_debug("P1", "idol_popup_panel.gd:_apply_modal_placement", "placement_applied", {
-		"base_modal_id": _base_modal_id,
-		"overlay_modal_id": _overlay_modal_id,
-		"base_anchor": [_base_anchor.x, _base_anchor.y],
-		"overlay_anchor": [_overlay_anchor.x, _overlay_anchor.y],
-		"base_display_rect": [_base_display_rect.position.x, _base_display_rect.position.y, _base_display_rect.size.x, _base_display_rect.size.y],
-		"overlay_display_rect": [_overlay_display_rect.position.x, _overlay_display_rect.position.y, _overlay_display_rect.size.x, _overlay_display_rect.size.y],
-		"base_render_size": [_base_render_size.x, _base_render_size.y],
-		"overlay_render_size": [_overlay_render_size.x, _overlay_render_size.y],
-		"modal_center_pos": [_modal_center.position.x, _modal_center.position.y] if _modal_center != null else [-1, -1],
-		"overlay_center_pos": [_overlay_center.position.x, _overlay_center.position.y] if _overlay_center != null else [-1, -1]
-	})
-	#endregion
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED and not _current_modal_id.is_empty():
 		if not _overlay_modal_id.is_empty():
@@ -489,18 +429,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
 	var click_pos: Vector2 = (event as InputEventMouseButton).global_position
-	#region agent log
-	DebugSessionLog.write_debug("H7", "idol_popup_panel.gd:_unhandled_input", "click", {
-		"base_modal_id": _base_modal_id,
-		"overlay_modal_id": _overlay_modal_id,
-		"click_pos": [click_pos.x, click_pos.y]
-	})
-	#endregion
 	# 根层场景气泡（无弹窗）：点击任意处关闭
 	if _bubble_panel != null and _bubble_panel.visible and _base_modal_id.is_empty() and _overlay_modal_id.is_empty():
-		_debug_log("H5", "idol_popup_panel.gd:_unhandled_input", "bubble_dismiss", {
-			"click_pos": [click_pos.x, click_pos.y]
-		})
 		hide_all()
 		bubble_dismissed.emit(true)
 		get_viewport().set_input_as_handled()
@@ -526,21 +456,6 @@ func _on_dismiss_rect_input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
 	var click_pos: Vector2 = (event as InputEventMouseButton).global_position
-	#region agent log
-	_debug_log("H5", "idol_popup_panel.gd:_on_dismiss_rect_input", "dismiss_rect_gui_input", {
-		"bubble_only": _bubble_only,
-		"bubble_visible_before": _bubble_panel.visible if _bubble_panel != null else false,
-		"click_pos": [click_pos.x, click_pos.y]
-	})
-	DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_on_dismiss_rect_input", "dismiss_rect_click", {
-		"base_modal_id": _base_modal_id,
-		"overlay_modal_id": _overlay_modal_id,
-		"bubble_only": _bubble_only,
-		"click_pos": [click_pos.x, click_pos.y],
-		"base_rect": [_base_display_rect.position.x, _base_display_rect.position.y, _base_display_rect.size.x, _base_display_rect.size.y],
-		"overlay_rect": [_overlay_display_rect.position.x, _overlay_display_rect.position.y, _overlay_display_rect.size.x, _overlay_display_rect.size.y]
-	})
-	#endregion
 	# 点击落在底栏槽位区：关气泡并放行，让 BottomBar._input 处理槽位
 	if IdolBottomBar.blocks_hotspot_at(click_pos):
 		_bubble_panel.visible = false
@@ -551,9 +466,6 @@ func _on_dismiss_rect_input(event: InputEvent) -> void:
 			_dismiss_rect.visible = false
 			_dismiss_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bubble_dismissed.emit(false)
-		_debug_log("H5", "idol_popup_panel.gd:_on_dismiss_rect_input", "dismiss_for_bottom_ui", {
-			"click_pos": [click_pos.x, click_pos.y]
-		})
 		get_viewport().set_input_as_handled()
 		return
 	if _bubble_only:
@@ -579,29 +491,17 @@ func _on_dismiss_rect_input(event: InputEvent) -> void:
 func _handle_modal_click(click_pos: Vector2) -> bool:
 	if not _overlay_modal_id.is_empty():
 		if _overlay_display_rect.size.x > 1.0 and _overlay_display_rect.has_point(click_pos):
-			#region agent log
-			DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "inside_overlay", {})
-			#endregion
 			if _hotspot_layer != null and _hotspot_layer.try_activate_at_global_pos(click_pos):
 				return true
 			return true
-		#region agent log
-		DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "outside_overlay_close", {})
-		#endregion
 		close_overlay()
 		return true
 	if _uses_dismiss_outside_base() or _forwards_sublayer_clicks():
 		if _base_display_rect.size.x > 1.0 and _base_display_rect.has_point(click_pos):
-			#region agent log
-			DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "inside_base", {})
-			#endregion
 			if _hotspot_layer != null and _hotspot_layer.try_activate_at_global_pos(click_pos):
 				return true
 			return true
 		if _uses_dismiss_outside_base():
-			#region agent log
-			DebugSessionLog.write_debug("H8", "idol_popup_panel.gd:_handle_modal_click", "outside_base_close", {})
-			#endregion
 			close_base_modal()
 			return true
 		return true
@@ -628,15 +528,6 @@ func _sync_base_dismiss_rect(modal_id: String) -> void:
 	_dismiss_rect.z_index = 0
 	if _modal_center != null:
 		_modal_center.z_index = 1
-	#region agent log
-	DebugSessionLog.write_debug("P3", "idol_popup_panel.gd:_sync_base_dismiss_rect", "dismiss_sync", {
-		"modal_id": modal_id,
-		"dismiss_outside": dismiss_outside,
-		"forward_clicks": forward_clicks,
-		"has_sublayer": _hotspot_layer.has_hotspots_for_parent(modal_id) if _hotspot_layer != null else false
-	})
-	#endregion
-
 func _ensure_bubble_dismiss_canvas() -> void:
 	if _bubble_dismiss_canvas != null:
 		return
@@ -665,12 +556,6 @@ func _show_root_bubble_dismiss_canvas() -> void:
 		_bubble_panel.z_index = 10
 		_bubble_on_canvas = true
 	_bubble_dismiss_canvas.visible = true
-	#region agent log
-	_debug_log("H5", "idol_popup_panel.gd:_show_root_bubble_dismiss_canvas", "canvas_shown", {
-		"canvas_layer": BUBBLE_DISMISS_CANVAS_LAYER
-	})
-	#endregion
-
 func _hide_root_bubble_dismiss_canvas() -> void:
 	if _bubble_dismiss_canvas != null:
 		_bubble_dismiss_canvas.visible = false
@@ -689,22 +574,7 @@ func _on_bubble_dismiss_catcher_gui_input(event: InputEvent) -> void:
 	var click_pos: Vector2 = (event as InputEventMouseButton).global_position
 	# 底栏区域不吞事件，交给 BottomBar 处理槽位
 	if IdolBottomBar.blocks_hotspot_at(click_pos):
-		#region agent log
-		DebugSessionLog.write_debug("H3", "idol_popup_panel.gd:_on_bubble_dismiss_catcher_gui_input", "bottom_pass_through_while_bubble_canvas", {
-			"click_pos": [click_pos.x, click_pos.y],
-			"canvas_visible": _bubble_dismiss_canvas.visible if _bubble_dismiss_canvas != null else false,
-			"bubble_visible": _bubble_panel.visible if _bubble_panel != null else false
-		})
-		_debug_log("H5", "idol_popup_panel.gd:_on_bubble_dismiss_catcher_gui_input", "pass_through_bottom_ui", {
-			"click_pos": [click_pos.x, click_pos.y]
-		})
-		#endregion
 		return
-	#region agent log
-	_debug_log("H5", "idol_popup_panel.gd:_on_bubble_dismiss_catcher_gui_input", "bubble_dismiss_canvas", {
-		"click_pos": [click_pos.x, click_pos.y]
-	})
-	#endregion
 	hide_all()
 	bubble_dismissed.emit(true)
 	if _bubble_dismiss_catcher != null:
@@ -847,29 +717,3 @@ func _panel_style(bg: Color, border: Color, border_width: int, radius: int) -> S
 	style.corner_radius_bottom_right = radius
 	style.corner_radius_bottom_left = radius
 	return style
-
-#region agent log
-const DEBUG_LOG_PATH := "res://debug-0ae22b.log"
-const DEBUG_SESSION_ID := "0ae22b"
-const Z_INDEX_DEFAULT := 120
-const Z_INDEX_BUBBLE_TOP := 350
-const BUBBLE_DISMISS_CANVAS_LAYER := 400
-
-func _debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
-	var payload := {
-		"sessionId": DEBUG_SESSION_ID,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-#endregion

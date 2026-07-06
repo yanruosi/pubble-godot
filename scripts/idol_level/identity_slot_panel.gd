@@ -41,7 +41,6 @@ var _active_rows: Array = []
 var _drag_overlay: CanvasLayer
 var _drag_ghost: Control
 var _drag_grab_offset := Vector2.ZERO
-var _drag_ghost_log_timer := 0.0
 var _pool_vocab_order: Array[String] = []
 var _identity_layer: Control
 
@@ -79,10 +78,6 @@ func open_panel() -> void:
 	_refresh_all_blanks()
 	_update_status_text()
 	_bring_status_to_front()
-	#region agent log
-	_log_identity_layout("open_panel")
-	#endregion
-
 func close_panel(emit_signal := true) -> void:
 	_set_panel_active(false)
 	if emit_signal:
@@ -189,12 +184,7 @@ func _build_ui() -> void:
 func _process(_delta: float) -> void:
 	if _drag_ghost == null:
 		return
-	var mouse_global := get_viewport().get_mouse_position()
-	_drag_ghost.global_position = mouse_global - _drag_grab_offset
-	_drag_ghost_log_timer += _delta
-	if _drag_ghost_log_timer < 0.15:
-		return
-	_drag_ghost_log_timer = 0.0
+	_drag_ghost.global_position = get_viewport().get_mouse_position() - _drag_grab_offset
 
 func _on_dim_gui_input(event: InputEvent) -> void:
 	_try_dismiss_on_outside_click(event, "dim")
@@ -229,18 +219,6 @@ func _render_identity_slots() -> void:
 		if row_id.is_empty():
 			continue
 		var unlocked: bool = _is_row_unlocked(row)
-		#region agent log
-		_debug_write("row_unlock_state", {
-			"runId": "slot2-may-fix",
-			"hypothesisId": "H2",
-			"row_id": row_id,
-			"unlocked": unlocked,
-			"unlock_condition": str(row.get("unlock_condition", "")),
-			"answer_vocab": str(row.get("answer_vocab", "")),
-			"has_answer_vocab": _vocab_bank != null and _vocab_bank.has_vocab(str(row.get("answer_vocab", ""))),
-			"event_unlocked": bool(_unlock_events.get(str(row.get("unlock_condition", "")), false))
-		})
-		#endregion
 		if unlocked:
 			_active_rows.append(row)
 		var portrait_rect: Rect2 = _portrait_rect_for_row(row_id)
@@ -389,44 +367,6 @@ func _update_status_text() -> void:
 	else:
 		_status_label.text = STATUS_CORRECT
 
-func _log_identity_layout(source: String) -> void:
-	var portraits: Array = []
-	if _identity_layer != null:
-		for child in _identity_layer.get_children():
-			if child.name.begins_with("PortraitHost_"):
-				var p := child as Control
-				portraits.append({
-					"name": p.name,
-					"pos": [p.position.x, p.position.y],
-					"size": [p.size.x, p.size.y]
-				})
-	#region agent log
-	var status_rect := _status_label_rect()
-	var bg_tex := load(TEX_IDENTITY_BG) as Texture2D
-	var bg_native := bg_tex.get_size() if bg_tex != null else Vector2.ZERO
-	_debug_write("identity_layout", {
-		"runId": "status-align-diagnosis",
-		"hypothesisId": "H1-H4",
-		"source": source,
-		"bg_native_size": [bg_native.x, bg_native.y],
-		"bg_code_size": [IDENTITY_BG_RECT.size.x, IDENTITY_BG_RECT.size.y],
-		"bg_stretch_y_ratio": IDENTITY_BG_RECT.size.y / maxf(bg_native.y, 1.0),
-		"portraits": portraits,
-		"blank_count": _blank_slots.size(),
-		"active_rows": _active_rows.size(),
-		"status_text": _status_label.text if _status_label != null else "",
-		"status_rect_psd": [STATUS_RECT.position.x, STATUS_RECT.position.y, STATUS_RECT.size.x, STATUS_RECT.size.y],
-		"status_rect_runtime": [status_rect.position.x, status_rect.position.y, status_rect.size.x, status_rect.size.y],
-		"status_text_width": _status_text_width(_status_label.text if _status_label != null else ""),
-		"status_psd_box_height": STATUS_RECT.size.y,
-		"identity_bg_bottom": IDENTITY_BG_RECT.position.y + IDENTITY_BG_RECT.size.y,
-		"status_box_bottom": status_rect.position.y + status_rect.size.y,
-		"status_font_size": _status_label.get_theme_font_size("font_size") if _status_label != null else -1,
-		"status_autowrap": _status_label.autowrap_mode if _status_label != null else -1,
-		"status_z": _status_label.z_index if _status_label != null else -1
-	})
-	#endregion
-
 func _chip_texture_for_vocab(vocab_id: String) -> String:
 	if _vocab_bank == null:
 		return SlotPanelLayout.TEX_CHIP_2
@@ -460,7 +400,6 @@ func _show_drag_ghost(vocab_id: String, grab_offset: Vector2, chip_size: Vector2
 	_drag_grab_offset = grab_offset
 	_drag_overlay.add_child(_drag_ghost)
 	_drag_ghost.global_position = get_viewport().get_mouse_position() - _drag_grab_offset
-	_drag_ghost_log_timer = 0.0
 	set_process(true)
 
 func _hide_drag_ghost() -> void:
@@ -526,15 +465,6 @@ func _drag_can_drop_row(row_id: String, _at: Vector2, data: Variant) -> bool:
 		return false
 	var vocab_id: String = str((data as Dictionary).get("vocab_id", ""))
 	var accepted := not vocab_id.is_empty() and _row_accepts_vocab(row_id, vocab_id)
-	#region agent log
-	_debug_write("blank_can_drop", {
-		"runId": "slot2-may-fix",
-		"hypothesisId": "H2-H3",
-		"row_id": row_id,
-		"vocab_id": vocab_id,
-		"accepted": accepted
-	})
-	#endregion
 	return accepted
 
 func _drag_drop_row(row_id: String, _at: Vector2, data: Variant) -> void:
@@ -543,23 +473,7 @@ func _drag_drop_row(row_id: String, _at: Vector2, data: Variant) -> void:
 	var payload: Dictionary = data
 	var vocab_id: String = str(payload.get("vocab_id", ""))
 	if not _row_accepts_vocab(row_id, vocab_id):
-		#region agent log
-		_debug_write("blank_drop_rejected", {
-			"runId": "slot2-may-fix",
-			"hypothesisId": "H2",
-			"row_id": row_id,
-			"vocab_id": vocab_id
-		})
-		#endregion
 		return
-	#region agent log
-	_debug_write("blank_drop_accepted", {
-		"runId": "slot2-may-fix",
-		"hypothesisId": "H2",
-		"row_id": row_id,
-		"vocab_id": vocab_id
-	})
-	#endregion
 	_drag_apply_fill(row_id, vocab_id, str(payload.get("from_row_id", "")))
 
 func _drag_clear_row(row_id: String) -> void:
@@ -654,20 +568,3 @@ func _is_row_unlocked(row: Dictionary) -> bool:
 	if not answer_vocab.is_empty() and _vocab_bank != null and _vocab_bank.has_vocab(answer_vocab):
 		return true
 	return false
-
-func _debug_write(message: String, data: Dictionary) -> void:
-	var payload := {
-		"sessionId": "45c98c",
-		"location": "identity_slot_panel.gd",
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000
-	}
-	var file := FileAccess.open("res://debug-45c98c.log", FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open("res://debug-45c98c.log", FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()

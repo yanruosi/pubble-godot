@@ -11,7 +11,12 @@ const PATH_BACK := "res://art/mainui/postui/back.png"
 const PATH_LOVE := "res://art/mainui/postui/love.png"
 
 const TYPE_ARTIST := 901
-const TYPE_FANS := 902
+
+const TAB_ARTIST := "artist"
+const TAB_SQUARE := "square"
+const TAB_SISTER := "sister"
+const TABTYPE_SQUARE := 0
+const TABTYPE_SISTER := 903
 
 const DESIGN_W := 1280.0
 const DESIGN_H := 720.0
@@ -20,24 +25,24 @@ const TAB_Y := 17.0
 const TAB_W := 707.0
 const TAB_H := 64.0
 const LIST_X := 288.0
-const LIST_Y := 90.0
+const LIST_Y := 130.0
 const LIST_W := 701.0
-# 返回键显示尺寸（须与热区 size 一致；back.png 原图约 122×124）
 const BACK_BTN_SIZE := Vector2(36, 36)
-const DEBUG_LOG_PATH := "D:/GAMES/pubble/debug-17a2ce.log"
-const DEBUG_SESSION_ID := "17a2ce"
 
-var _active_tab: String = "artist"
+var _active_tab: String = TAB_ARTIST
 var _posts_raw: Array = []
 var _tab_artist: Button
-var _tab_fans: Button
+var _tab_square: Button
+var _tab_sister: Button
 var _tab_bar: PanelContainer
 var _list_box: VBoxContainer
 var _scroll: ScrollContainer
 var _content_root: Control
 var _manual_dragging: bool = false
 var _love_effect_tex: Texture2D
-
+var _banner_bar: ProgressBar
+var _currency_label: Label
+var _prev_tabtype: int = -1
 
 func _ready() -> void:
 	_load_json()
@@ -56,12 +61,40 @@ func _load_tex(path: String) -> Texture2D:
 
 func set_active_tab(tab: String) -> void:
 	var normalized := tab.to_lower()
-	if normalized != "fans":
-		normalized = "artist"
+	if normalized not in [TAB_ARTIST, TAB_SQUARE, TAB_SISTER]:
+		normalized = TAB_ARTIST
+	if _prev_tabtype >= 0:
+		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+		if expose != null:
+			expose.on_tab_left()
+	_prev_tabtype = _tabtype_for_name(normalized)
 	_active_tab = normalized
 	if _tab_artist != null:
 		_set_tab_visual()
+		_start_banner_for_current_tab()
 	refresh_feed()
+	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
+	if tutor != null:
+		tutor.notify_tab_opened(normalized)
+
+
+func _tabtype_for_name(tab: String) -> int:
+	match tab:
+		TAB_SQUARE:
+			return TABTYPE_SQUARE
+		TAB_SISTER:
+			return TABTYPE_SISTER
+		_:
+			return -1
+
+
+func _start_banner_for_current_tab() -> void:
+	var tabtype := _tabtype_for_name(_active_tab)
+	if tabtype < 0:
+		return
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null:
+		expose.start_active_timer(tabtype)
 
 
 func get_active_tab() -> String:
@@ -126,6 +159,25 @@ func _build_ui() -> void:
 	_tab_bar = _build_tab_bar()
 	_content_root.add_child(_tab_bar)
 
+	_currency_label = Label.new()
+	_currency_label.position = Vector2(900, 12)
+	_currency_label.add_theme_font_size_override("font_size", 14)
+	_content_root.add_child(_currency_label)
+
+	var banner_panel := PanelContainer.new()
+	banner_panel.position = Vector2(TAB_X, 88)
+	banner_panel.custom_minimum_size = Vector2(TAB_W, 32)
+	_content_root.add_child(banner_panel)
+	_banner_bar = ProgressBar.new()
+	_banner_bar.custom_minimum_size = Vector2(TAB_W - 20, 24)
+	_banner_bar.max_value = 1.0
+	_banner_bar.show_percentage = false
+	banner_panel.add_child(_banner_bar)
+
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null and not expose.banner_progress_changed.is_connected(_on_banner_progress):
+		expose.banner_progress_changed.connect(_on_banner_progress)
+
 	_scroll = ScrollContainer.new()
 	_scroll.position = Vector2(LIST_X, LIST_Y)
 	_scroll.size = Vector2(LIST_W, maxf(100.0, size.y - LIST_Y))
@@ -140,7 +192,26 @@ func _build_ui() -> void:
 	_list_box.custom_minimum_size.x = LIST_W
 	_scroll.add_child(_list_box)
 	_set_tab_visual()
-	call_deferred("_debug_log_feed_layout")
+	_update_currency_hud()
+
+
+func _on_banner_progress(tabtype: int, ratio: float) -> void:
+	if _banner_bar == null:
+		return
+	if tabtype != _tabtype_for_name(_active_tab):
+		return
+	_banner_bar.value = ratio
+
+
+func _update_currency_hud() -> void:
+	if _currency_label == null:
+		return
+	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if sm == null:
+		return
+	_currency_label.text = "fp:%d  intel:%d  ★:%d  Lv:%d/%d" % [
+		sm.fp, sm.intel, sm.stars, sm.intellevel, sm.fanlevel
+	]
 
 
 func _notification(what: int) -> void:
@@ -178,12 +249,19 @@ func _build_tab_bar() -> PanelContainer:
 	_tab_artist.pressed.connect(func() -> void: set_active_tab("artist"))
 	tab_row.add_child(_tab_artist)
 
-	_tab_fans = Button.new()
-	_tab_fans.flat = true
-	_tab_fans.text = "粉丝"
-	_tab_fans.focus_mode = Control.FOCUS_NONE
-	_tab_fans.pressed.connect(func() -> void: set_active_tab("fans"))
-	tab_row.add_child(_tab_fans)
+	_tab_sister = Button.new()
+	_tab_sister.flat = true
+	_tab_sister.text = "嫂子站"
+	_tab_sister.focus_mode = Control.FOCUS_NONE
+	_tab_sister.pressed.connect(func() -> void: set_active_tab(TAB_SISTER))
+	tab_row.add_child(_tab_sister)
+
+	_tab_square = Button.new()
+	_tab_square.flat = true
+	_tab_square.text = "广场"
+	_tab_square.focus_mode = Control.FOCUS_NONE
+	_tab_square.pressed.connect(func() -> void: set_active_tab(TAB_SQUARE))
+	tab_row.add_child(_tab_square)
 
 	return panel
 
@@ -193,53 +271,98 @@ func _on_feed_tab_changed(_idx: int) -> void:
 
 
 func _set_tab_visual() -> void:
-	if _tab_artist == null or _tab_fans == null:
+	if _tab_artist == null:
 		return
 	var active := Color(0.17, 0.14, 0.24, 1)
 	var inactive := Color(0.55, 0.51, 0.64, 1)
-	var artist_active := _active_tab == "artist"
-	_tab_artist.add_theme_font_size_override("font_size", 20 if artist_active else 18)
-	_tab_fans.add_theme_font_size_override("font_size", 20 if not artist_active else 18)
-	_tab_artist.add_theme_color_override("font_color", active if artist_active else inactive)
-	_tab_fans.add_theme_color_override("font_color", active if not artist_active else inactive)
+	for pair in [
+		[_tab_artist, TAB_ARTIST],
+		[_tab_square, TAB_SQUARE],
+		[_tab_sister, TAB_SISTER],
+	]:
+		var btn: Button = pair[0]
+		var name: String = pair[1]
+		var on := _active_tab == name
+		btn.add_theme_font_size_override("font_size", 20 if on else 18)
+		btn.add_theme_color_override("font_color", active if on else inactive)
 
 
 func refresh_feed() -> void:
 	_load_json()
+	_update_currency_hud()
 	if _list_box == null:
 		return
 	for c in _list_box.get_children():
 		c.queue_free()
 
+	if _active_tab == TAB_ARTIST:
+		_refresh_artist_tab()
+	else:
+		_refresh_instance_tab(_tabtype_for_name(_active_tab))
+
+
+func _refresh_artist_tab() -> void:
 	var save_manager: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
 	var chapter_manager: ChapterManager = get_node_or_null("/root/ChapterManagerSingleton") as ChapterManager
 	var condition_checker: ConditionChecker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
+	#region agent log
+	_agent_debug_log("H2", "feed_page.gd:_refresh_artist_tab", "entry", {
+		"active_tab": _active_tab,
+		"posts_raw_count": _posts_raw.size(),
+		"save_ok": save_manager != null,
+		"chapter_ok": chapter_manager != null,
+		"checker_ok": condition_checker != null,
+		"intellevel": save_manager.intellevel if save_manager else -1,
+		"fanlevel": save_manager.fanlevel if save_manager else -1,
+	})
+	#endregion
 	if save_manager == null or chapter_manager == null or condition_checker == null:
+		#region agent log
+		_agent_debug_log("H2", "feed_page.gd:_refresh_artist_tab", "early_return_missing_autoload", {})
+		#endregion
 		return
 
-	var type_wanted := TYPE_ARTIST if _active_tab == "artist" else TYPE_FANS
 	var enriched: Array = []
 	for item in _posts_raw:
 		if not (item is Dictionary):
 			continue
 		var post: Dictionary = (item as Dictionary).duplicate(true)
-		if int(post.get("type", 0)) != type_wanted:
+		if int(post.get("type", 0)) != TYPE_ARTIST:
 			continue
-		if not condition_checker.is_feed_post_visible(post):
+		var visible: bool = condition_checker.is_feed_post_visible(post)
+		#region agent log
+		_agent_debug_log("H1", "feed_page.gd:_refresh_artist_tab", "post_filter", {
+			"post_id": str(post.get("post_id", "")),
+			"condition_id": int(post.get("condition_id", 0)),
+			"visible": visible,
+		})
+		#endregion
+		if not visible:
 			continue
 		var e: Dictionary = _enrich_post(post, chapter_manager)
 		if e.is_empty():
+			#region agent log
+			_agent_debug_log("H4", "feed_page.gd:_refresh_artist_tab", "enrich_failed", {
+				"post_id": str(post.get("post_id", "")),
+				"level_id": str(post.get("level_id", "")),
+			})
+			#endregion
 			continue
+		var chapter_levels: Array = e.get("_chapter_levels", [])
+		e["_locked"] = condition_checker.is_feed_post_locked_visible(post, chapter_levels)
 		enriched.append(e)
 
-	if _active_tab == "artist":
-		_sort_artist_list(enriched, save_manager, chapter_manager)
-	else:
-		_sort_fans_list(enriched)
+	_sort_artist_list(enriched, save_manager, chapter_manager)
+	#region agent log
+	_agent_debug_log("H1", "feed_page.gd:_refresh_artist_tab", "result", {
+		"enriched_count": enriched.size(),
+		"show_empty_tip": enriched.is_empty(),
+	})
+	#endregion
 
 	if enriched.is_empty():
 		var tip := Label.new()
-		tip.text = "暂无动态"
+		tip.text = "暂无艺人动态（提升情报等级解锁）"
 		tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
 		_list_box.add_child(tip)
 		return
@@ -260,66 +383,50 @@ func refresh_feed() -> void:
 			card.pin_toggled.connect(func(is_pinned: bool) -> void:
 				_on_pin_toggled(str(ebind.get("post_id", "")), is_pinned, save_manager)
 			)
-	call_deferred("_debug_log_feed_layout")
 
 
-#region agent log
-func _dbg17(hypothesis_id: String, location: String, message: String, data: Dictionary = {}, run_id: String = "post-fix") -> void:
-	var payload := {
-		"sessionId": DEBUG_SESSION_ID,
-		"runId": run_id,
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": int(Time.get_unix_time_from_system() * 1000.0)
-	}
-	var f: FileAccess = FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE)
-	if f == null:
-		f = FileAccess.open(DEBUG_LOG_PATH, FileAccess.WRITE)
-	if f == null:
+func _refresh_instance_tab(tabtype: int) -> void:
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose == null:
 		return
-	f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-
-
-func _debug_log_feed_layout() -> void:
-	if _content_root == null:
-		return
-	var back_btn := _content_root.get_node_or_null("BtnBack") as TextureButton
-	if back_btn != null:
-		var tex_size := Vector2.ZERO
-		if back_btn.texture_normal != null:
-			tex_size = back_btn.texture_normal.get_size()
-		_dbg17(
-			"B",
-			"feed_page.gd:_debug_log_feed_layout",
-			"返回键布局",
-			{
-				"btn_size": str(back_btn.size),
-				"custom_minimum_size": str(back_btn.custom_minimum_size),
-				"btn_global_rect": str(back_btn.get_global_rect()),
-				"tex_size": str(tex_size),
-				"stretch_mode": back_btn.stretch_mode
-			}
+	for inst in expose.get_instances_for_tab(tabtype):
+		if not (inst is Dictionary):
+			continue
+		var row: PanelContainer = PanelContainer.new()
+		row.custom_minimum_size = Vector2(LIST_W, 72)
+		var h := HBoxContainer.new()
+		row.add_child(h)
+		var tpl: Dictionary = expose.get_template(str(inst.get("postid", "")))
+		var title := Label.new()
+		title.text = str(tpl.get("title", inst.get("postid", "")))
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(title)
+		var status := Label.new()
+		status.text = str(inst.get("exposestatus", "idle"))
+		h.add_child(status)
+		var expose_btn := Button.new()
+		expose_btn.text = "曝光"
+		var iid: String = str(inst.get("instanceid", ""))
+		expose_btn.pressed.connect(func() -> void:
+			expose.start_expose(iid)
+			refresh_feed()
 		)
-	if _list_box == null or _list_box.get_child_count() == 0:
-		return
-	var first := _list_box.get_child(0)
-	if first is Control:
-		var card_ctrl := first as Control
-		_dbg17(
-			"A",
-			"feed_page.gd:_debug_log_feed_layout",
-			"首张卡片布局",
-			{
-				"card_size": str(card_ctrl.size),
-				"card_global_rect": str(card_ctrl.get_global_rect()),
-				"list_w": LIST_W
-			}
+		h.add_child(expose_btn)
+		var collect_btn := Button.new()
+		collect_btn.text = "收取"
+		collect_btn.pressed.connect(func() -> void:
+			if expose.collect_instance(iid):
+				var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
+				if tutor != null:
+					tutor.notify_instance_collected()
+			refresh_feed()
 		)
-#endregion
+		h.add_child(collect_btn)
+		_list_box.add_child(row)
+	if _list_box.get_child_count() == 0:
+		var tip := Label.new()
+		tip.text = "暂无放置帖子"
+		_list_box.add_child(tip)
 
 
 func _enrich_post(post: Dictionary, chapter_manager: ChapterManager) -> Dictionary:
@@ -346,10 +453,8 @@ func _enrich_post(post: Dictionary, chapter_manager: ChapterManager) -> Dictiona
 
 
 func _card_view_dict(e: Dictionary) -> Dictionary:
-	# 艺人 Tab 用 layout artist；粉丝 Tab 用 layout fans（背景/爱心/评论/收藏资源与艺人相同）
-	var layout := "artist" if _active_tab == "artist" else "fans"
 	return {
-		"layout": layout,
+		"layout": "artist",
 		"artist_name": e.get("artist_name", ""),
 		"time_display": e.get("time_display", ""),
 		"text": e.get("text", ""),
@@ -357,6 +462,7 @@ func _card_view_dict(e: Dictionary) -> Dictionary:
 		"image_path2": e.get("image_path2", ""),
 		"avatar_path": e.get("avatar_path", ""),
 		"is_pinned": bool(e.get("_is_pinned", false)),
+		"locked": bool(e.get("_locked", false)),
 	}
 
 
@@ -416,16 +522,6 @@ func _sort_fans_list(items: Array) -> void:
 			return na > nb
 		return str(a.get("post_id", "")) > str(b.get("post_id", ""))
 	)
-	#region agent log
-	if not items.is_empty():
-		var ids: Array = []
-		for item in items:
-			if item is Dictionary:
-				ids.append(str((item as Dictionary).get("post_id", "")))
-		_dbg17("F", "feed_page.gd:_sort_fans_list", "粉丝帖排序结果", {"post_ids": ids, "active_tab": _active_tab})
-	#endregion
-
-
 func _current_level_id(save_manager: SaveManager, chapter_manager: ChapterManager) -> String:
 	var best_order: int = -1
 	var best_id: String = ""
@@ -470,6 +566,15 @@ func _is_level_playable(
 
 
 func _on_media_pressed(e: Dictionary, save_manager: SaveManager, chapter_manager: ChapterManager) -> void:
+	if bool(e.get("_locked", false)):
+		var cc: ConditionChecker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
+		var msg := "关卡尚未解锁"
+		if cc != null:
+			var level_row: Dictionary = e.get("_level_row", {})
+			var cid: int = int(level_row.get("unlockconditionid", 0))
+			msg = cc.get_fail_text(cid) if cid > 0 else msg
+		push_warning("feed locked: %s" % msg)
+		return
 	var pid: String = str(e.get("post_id", ""))
 	if not pid.is_empty():
 		save_manager.mark_feed_post_seen(pid)
@@ -553,3 +658,25 @@ func _play_heart_effect(anchor: Node, anchor_global: Vector2 = Vector2.ZERO) -> 
 	tw_fallback.tween_property(heart_label, "position:y", heart_label.position.y - 18, 0.35)
 	tw_fallback.parallel().tween_property(heart_label, "modulate:a", 0.0, 0.35)
 	tw_fallback.tween_callback(heart_label.queue_free)
+
+
+#region agent log
+func _agent_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary) -> void:
+	var payload := {
+		"sessionId": "580f3e",
+		"hypothesisId": hypothesis_id,
+		"location": location,
+		"message": message,
+		"data": data,
+		"timestamp": Time.get_unix_time_from_system() * 1000,
+		"runId": "pre-fix",
+	}
+	var file := FileAccess.open("res://debug-580f3e.log", FileAccess.READ_WRITE)
+	if file == null:
+		file = FileAccess.open("res://debug-580f3e.log", FileAccess.WRITE)
+	if file == null:
+		return
+	file.seek_end()
+	file.store_string(JSON.stringify(payload) + "\n")
+	file.close()
+#endregion

@@ -1,5 +1,26 @@
 [
   {
+    "postid": "9001",
+    "posttype": 101,
+    "tabtype": 903,
+    "conditionid": 0,
+    "tier": "A",
+    "weightlow": 0,
+    "weightmid": 0,
+    "weighthigh": 0,
+    "uniquekey": "tutorial_seed",
+    "title": "教程嫂子路透",
+    "text": "新手引导预置帖，曝光秒结算。",
+    "avatarpath": "",
+    "imagepath": "",
+    "durationsec": 0,
+    "maxparallel": 1,
+    "grantfp": 0,
+    "grantintel": 15,
+    "grantstars": 0,
+    "opiniondelta": 0
+  },
+  {
     "postid": "1",
     "posttype": 101,
     "tabtype": 903,

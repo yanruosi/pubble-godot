@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "offerid": 1,
+    "name": "教程专辑",
+    "currencytype": 22,
+    "price": 50,
+    "itemid": 1001,
+    "conditionid": 0,
+    "stocklimit": 0,
+    "shoptab": 1,
+    "tutorialonly": 1
+  }
+]

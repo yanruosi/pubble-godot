@@ -1,6 +1,5 @@
 extends SceneTree
 
-const DEBUG_LOG := "res://debug-45c98c.log"
 
 
 func _init() -> void:

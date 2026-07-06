@@ -2,7 +2,6 @@ extends SceneTree
 
 ## 模拟：在 chip A 按下并拖过 B/C，验证只触发一次 vocab_drag_begin
 
-const DEBUG_LOG := "res://debug-45c98c.log"
 
 
 func _init() -> void:
