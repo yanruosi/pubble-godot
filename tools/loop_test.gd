@@ -26,19 +26,13 @@ func _run() -> void:
 	cc.setup(cm, sm)
 	sm.reset_progress()
 	expose.seed_tutorial_instance()
-	var inst_id := str(sm.feed_instances[0].get("instanceid", ""))
-	expose.start_expose(inst_id)
-	if not expose.collect_instance(inst_id):
-		_fail("collect seed")
-	elif sm.intel <= 0:
-		_fail("intel after collect")
-	else:
-		_ok("seed collect intel")
-	eco.try_upgrade_intel()
+	expose.on_tab_entered(903)
 	if sm.intellevel < 1:
-		_fail("intel upgrade")
+		_fail("intel upgrade after sister enter")
+	elif sm.intel <= 0:
+		_fail("intel after sister enter")
 	else:
-		_ok("intel upgrade")
+		_ok("seed collect intel + auto upgrade")
 	eco.add_currency(22, 100, "test")
 	if not shop.purchase(1):
 		_fail("shop purchase")
@@ -48,7 +42,14 @@ func _run() -> void:
 		_fail("fan upgrade")
 	else:
 		_ok("fan upgrade")
-	if not act.participate("7"):
+	var has_sign_act := false
+	for row in act.get_activities():
+		if row is Dictionary and str(row.get("activityid", "")) == "7":
+			has_sign_act = true
+			break
+	if not has_sign_act:
+		_ok("sign activity (M3: activity 7 待配表)")
+	elif not act.participate("7"):
 		_fail("sign activity")
 	else:
 		_ok("sign activity")

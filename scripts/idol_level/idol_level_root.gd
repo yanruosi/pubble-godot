@@ -584,7 +584,14 @@ func _show_truth_overlay(review_mode: bool = false) -> void:
 	if _truth_dismiss_btn != null:
 		_truth_dismiss_btn.text = "关闭" if review_mode else "返回艺人动态"
 	_truth_text_label.text = str(_level_config.get("truth_text", "真相尚未配置。"))
-	_truth_reward_label.text = "关卡完成"
+	if _first_clear_this_finish and _chapter_manager != null:
+		var row: Dictionary = _chapter_manager.get_level_by_id(level_id)
+		var gs: int = int(row.get("grantstars", 0))
+		var gf: int = int(row.get("grantfp", 0))
+		var gi: int = int(row.get("grantintel", 0))
+		_truth_reward_label.text = "获得：★%d 积分%d 情报%d" % [gs, gf, gi]
+	else:
+		_truth_reward_label.text = "关卡完成"
 	_truth_layer.visible = true
 
 func _ensure_truth_overlay() -> void:

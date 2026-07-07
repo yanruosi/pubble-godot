@@ -13,42 +13,53 @@ const PATH_LOVE := "res://art/mainui/postui/love.png"
 const TYPE_ARTIST := 901
 
 const TAB_ARTIST := "artist"
-const TAB_SQUARE := "square"
+const TAB_FANDOM := "fandom"
+const TAB_ACCOUNT := "account"
 const TAB_SISTER := "sister"
-const TABTYPE_SQUARE := 0
+const TAB_MARKET := "market"
+
+const TABTYPE_FANDOM := 0
 const TABTYPE_SISTER := 903
 
-const DESIGN_W := 1280.0
-const DESIGN_H := 720.0
-const TAB_X := 286.0
-const TAB_Y := 17.0
-const TAB_W := 707.0
-const TAB_H := 64.0
-const LIST_X := 288.0
-const LIST_Y := 130.0
-const LIST_W := 701.0
+const P1_RECT := Rect2(206, 48, 142, 672)
+const P2_RECT := Rect2(356, 31, 401, 133)
+const P3_RECT := Rect2(353, 187, 495, 77)
+const P4_RECT := Rect2(358, 264, 488, 456)
+const P5_RECT := Rect2(855, 49, 217, 671)
 const BACK_BTN_SIZE := Vector2(36, 36)
 
 var _active_tab: String = TAB_ARTIST
 var _posts_raw: Array = []
-var _tab_artist: Button
-var _tab_square: Button
-var _tab_sister: Button
-var _tab_bar: PanelContainer
+var _tab_buttons: Dictionary = {}
 var _list_box: VBoxContainer
 var _scroll: ScrollContainer
 var _content_root: Control
 var _manual_dragging: bool = false
+var _scroll_started: bool = false
 var _love_effect_tex: Texture2D
+
+var _post_area: Control
+var _banner_area: Control
 var _banner_bar: ProgressBar
-var _currency_label: Label
-var _prev_tabtype: int = -1
+var _banner_hint: Label
+var _banner_intel_label: Label
+var _banner_flash: Label
+var _hot_list: VBoxContainer
+
+var _fp_label: Label
+var _stars_label: Label
+var _intel_level_label: Label
+var _toast_label: Label
 
 func _ready() -> void:
 	_load_json()
 	_love_effect_tex = _load_tex(PATH_LOVE)
 	call_deferred("_build_ui")
-	call_deferred("refresh_feed")
+	call_deferred("_enter_initial_tab")
+
+
+func _enter_initial_tab() -> void:
+	set_active_tab(TAB_ARTIST)
 
 
 func _load_tex(path: String) -> Texture2D:
@@ -60,41 +71,44 @@ func _load_tex(path: String) -> Texture2D:
 
 
 func set_active_tab(tab: String) -> void:
-	var normalized := tab.to_lower()
-	if normalized not in [TAB_ARTIST, TAB_SQUARE, TAB_SISTER]:
-		normalized = TAB_ARTIST
-	if _prev_tabtype >= 0:
-		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
-		if expose != null:
-			expose.on_tab_left()
-	_prev_tabtype = _tabtype_for_name(normalized)
+	var normalized := _normalize_tab_name(tab)
+	var old_exposure := _exposure_tabtype_for_name(_active_tab)
+	var new_exposure := _exposure_tabtype_for_name(normalized)
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null and old_exposure >= 0:
+		expose.on_tab_left(old_exposure)
 	_active_tab = normalized
-	if _tab_artist != null:
+	_scroll_started = false
+	if expose != null and new_exposure >= 0:
+		expose.on_tab_entered(new_exposure)
+	if is_inside_tree():
+		_update_layout_visibility()
 		_set_tab_visual()
-		_start_banner_for_current_tab()
-	refresh_feed()
+		_refresh_banner_area()
+		_update_currency_hud()
+		refresh_feed()
 	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 	if tutor != null:
 		tutor.notify_tab_opened(normalized)
 
 
-func _tabtype_for_name(tab: String) -> int:
+func _normalize_tab_name(tab: String) -> String:
+	var t := tab.to_lower()
+	if t == "square":
+		return TAB_FANDOM
+	if t in [TAB_ARTIST, TAB_FANDOM, TAB_ACCOUNT, TAB_SISTER, TAB_MARKET]:
+		return t
+	return TAB_ARTIST
+
+
+func _exposure_tabtype_for_name(tab: String) -> int:
 	match tab:
-		TAB_SQUARE:
-			return TABTYPE_SQUARE
+		TAB_FANDOM:
+			return TABTYPE_FANDOM
 		TAB_SISTER:
 			return TABTYPE_SISTER
 		_:
 			return -1
-
-
-func _start_banner_for_current_tab() -> void:
-	var tabtype := _tabtype_for_name(_active_tab)
-	if tabtype < 0:
-		return
-	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
-	if expose != null:
-		expose.start_active_timer(tabtype)
 
 
 func get_active_tab() -> String:
@@ -147,7 +161,6 @@ func _build_ui() -> void:
 		back_btn.name = "BtnBack"
 		back_btn.position = Vector2(12, 12)
 		back_btn.texture_normal = back_tex
-		# 手动 position 的控件必须显式设 size，否则仍按纹理原尺寸 122×124 绘制
 		back_btn.ignore_texture_size = true
 		back_btn.custom_minimum_size = BACK_BTN_SIZE
 		back_btn.size = BACK_BTN_SIZE
@@ -156,31 +169,178 @@ func _build_ui() -> void:
 		back_btn.pressed.connect(func() -> void: feed_back_requested.emit())
 		_content_root.add_child(back_btn)
 
-	_tab_bar = _build_tab_bar()
-	_content_root.add_child(_tab_bar)
-
-	_currency_label = Label.new()
-	_currency_label.position = Vector2(900, 12)
-	_currency_label.add_theme_font_size_override("font_size", 14)
-	_content_root.add_child(_currency_label)
-
-	var banner_panel := PanelContainer.new()
-	banner_panel.position = Vector2(TAB_X, 88)
-	banner_panel.custom_minimum_size = Vector2(TAB_W, 32)
-	_content_root.add_child(banner_panel)
-	_banner_bar = ProgressBar.new()
-	_banner_bar.custom_minimum_size = Vector2(TAB_W - 20, 24)
-	_banner_bar.max_value = 1.0
-	_banner_bar.show_percentage = false
-	banner_panel.add_child(_banner_bar)
+	_build_p6_hud()
+	_build_p5_hotsearch()
+	_build_p1_tabs()
+	_build_p2_post_area()
+	_build_p3_banner()
+	_build_p4_list()
 
 	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
-	if expose != null and not expose.banner_progress_changed.is_connected(_on_banner_progress):
-		expose.banner_progress_changed.connect(_on_banner_progress)
+	if expose != null:
+		if not expose.banner_progress_changed.is_connected(_on_banner_progress):
+			expose.banner_progress_changed.connect(_on_banner_progress)
+		if not expose.lump_granted.is_connected(_on_lump_granted):
+			expose.lump_granted.connect(_on_lump_granted)
+		if not expose.intel_level_up.is_connected(_on_intel_level_up):
+			expose.intel_level_up.connect(_on_intel_level_up)
+		if not expose.instance_changed.is_connected(_on_instance_changed):
+			expose.instance_changed.connect(_on_instance_changed)
 
+	_toast_label = Label.new()
+	_toast_label.visible = false
+	_toast_label.z_index = 100
+	_toast_label.add_theme_font_size_override("font_size", 16)
+	_toast_label.add_theme_color_override("font_color", Color(0.2, 0.15, 0.35, 1))
+	_content_root.add_child(_toast_label)
+
+	_update_layout_visibility()
+	_set_tab_visual()
+	_refresh_banner_area()
+	_update_currency_hud()
+
+
+func _build_p1_tabs() -> void:
+	var panel := PanelContainer.new()
+	panel.position = P1_RECT.position
+	panel.custom_minimum_size = P1_RECT.size
+	panel.size = P1_RECT.size
+	var ps := StyleBoxFlat.new()
+	ps.bg_color = Color(1, 1, 1, 0.35)
+	panel.add_theme_stylebox_override("panel", ps)
+	_content_root.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	panel.add_child(margin)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	margin.add_child(col)
+
+	var title := Label.new()
+	title.text = "pubble"
+	title.add_theme_font_size_override("font_size", 22)
+	col.add_child(title)
+
+	var tabs: Array = [
+		[TAB_ARTIST, "艺人动态"],
+		[TAB_FANDOM, "饭圈动态"],
+		[TAB_ACCOUNT, "我的账号"],
+		[TAB_SISTER, "嫂子站"],
+		[TAB_MARKET, "周边中转站"],
+	]
+	_tab_buttons.clear()
+	for pair in tabs:
+		var btn := Button.new()
+		btn.flat = true
+		btn.text = pair[1]
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var tab_id: String = pair[0]
+		btn.pressed.connect(func() -> void: set_active_tab(tab_id))
+		col.add_child(btn)
+		_tab_buttons[tab_id] = btn
+
+
+func _build_p2_post_area() -> void:
+	_post_area = PanelContainer.new()
+	_post_area.name = "PostArea"
+	_post_area.position = P2_RECT.position
+	_post_area.custom_minimum_size = P2_RECT.size
+	_post_area.size = P2_RECT.size
+	var ps := StyleBoxFlat.new()
+	ps.bg_color = Color(1, 1, 1, 0.92)
+	ps.corner_radius_top_left = 6
+	ps.corner_radius_top_right = 6
+	ps.corner_radius_bottom_left = 6
+	ps.corner_radius_bottom_right = 6
+	_post_area.add_theme_stylebox_override("panel", ps)
+	_content_root.add_child(_post_area)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	_post_area.add_child(margin)
+
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 6)
+	margin.add_child(root)
+
+	var input := LineEdit.new()
+	input.placeholder_text = "点击输入..."
+	input.editable = false
+	root.add_child(input)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	root.add_child(row)
+
+	for label_text in ["安利", "反黑", "情报", "其他"]:
+		var b := Button.new()
+		b.text = label_text
+		b.disabled = true
+		row.add_child(b)
+
+	var send := Button.new()
+	send.text = "发送"
+	send.disabled = true
+	send.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(send)
+
+
+func _build_p3_banner() -> void:
+	_banner_area = Control.new()
+	_banner_area.name = "BannerArea"
+	_banner_area.position = P3_RECT.position
+	_banner_area.custom_minimum_size = P3_RECT.size
+	_banner_area.size = P3_RECT.size
+	_content_root.add_child(_banner_area)
+
+	_banner_hint = Label.new()
+	_banner_hint.position = Vector2(8, 8)
+	_banner_hint.size = Vector2(P3_RECT.size.x - 16, 24)
+	_banner_hint.add_theme_font_size_override("font_size", 14)
+	_banner_area.add_child(_banner_hint)
+
+	_banner_intel_label = Label.new()
+	_banner_intel_label.position = Vector2(8, 8)
+	_banner_intel_label.size = Vector2(P3_RECT.size.x - 16, 24)
+	_banner_intel_label.add_theme_font_size_override("font_size", 14)
+	_banner_intel_label.visible = false
+	_banner_area.add_child(_banner_intel_label)
+
+	_banner_bar = ProgressBar.new()
+	_banner_bar.position = Vector2(8, 40)
+	_banner_bar.custom_minimum_size = Vector2(P3_RECT.size.x - 16, 24)
+	_banner_bar.size = Vector2(P3_RECT.size.x - 16, 24)
+	_banner_bar.max_value = 1.0
+	_banner_bar.show_percentage = false
+	_banner_bar.visible = false
+	_banner_area.add_child(_banner_bar)
+
+	_banner_flash = Label.new()
+	_banner_flash.text = "情报等级提升！"
+	_banner_flash.position = Vector2(8, 8)
+	_banner_flash.size = P3_RECT.size - Vector2(16, 16)
+	_banner_flash.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_flash.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_banner_flash.add_theme_font_size_override("font_size", 18)
+	_banner_flash.add_theme_color_override("font_color", Color(0.55, 0.25, 0.85, 1))
+	_banner_flash.visible = false
+	_banner_area.add_child(_banner_flash)
+
+
+func _build_p4_list() -> void:
 	_scroll = ScrollContainer.new()
-	_scroll.position = Vector2(LIST_X, LIST_Y)
-	_scroll.size = Vector2(LIST_W, maxf(100.0, size.y - LIST_Y))
+	_scroll.position = P4_RECT.position
+	_scroll.size = P4_RECT.size
+	_scroll.custom_minimum_size = P4_RECT.size
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	_scroll.gui_input.connect(_on_scroll_gui_input)
@@ -188,103 +348,198 @@ func _build_ui() -> void:
 
 	_list_box = VBoxContainer.new()
 	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list_box.add_theme_constant_override("separation", 16)
-	_list_box.custom_minimum_size.x = LIST_W
+	_list_box.add_theme_constant_override("separation", 12)
+	_list_box.custom_minimum_size.x = P4_RECT.size.x
 	_scroll.add_child(_list_box)
-	_set_tab_visual()
-	_update_currency_hud()
 
 
-func _on_banner_progress(tabtype: int, ratio: float) -> void:
-	if _banner_bar == null:
-		return
-	if tabtype != _tabtype_for_name(_active_tab):
-		return
-	_banner_bar.value = ratio
-
-
-func _update_currency_hud() -> void:
-	if _currency_label == null:
-		return
-	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
-	if sm == null:
-		return
-	_currency_label.text = "fp:%d  intel:%d  ★:%d  Lv:%d/%d" % [
-		sm.fp, sm.intel, sm.stars, sm.intellevel, sm.fanlevel
-	]
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_RESIZED and _scroll != null:
-		_scroll.size = Vector2(LIST_W, maxf(100.0, size.y - LIST_Y))
-
-
-func _build_tab_bar() -> PanelContainer:
+func _build_p5_hotsearch() -> void:
 	var panel := PanelContainer.new()
-	panel.position = Vector2(TAB_X, TAB_Y)
-	panel.custom_minimum_size = Vector2(TAB_W, TAB_H)
+	panel.position = P5_RECT.position
+	panel.custom_minimum_size = P5_RECT.size
+	panel.size = P5_RECT.size
 	var ps := StyleBoxFlat.new()
-	ps.bg_color = Color(1, 1, 1, 1)
-	ps.corner_radius_top_left = 8
-	ps.corner_radius_top_right = 8
-	ps.corner_radius_bottom_right = 8
-	ps.corner_radius_bottom_left = 8
+	ps.bg_color = Color(1, 1, 1, 0.25)
 	panel.add_theme_stylebox_override("panel", ps)
+	_content_root.add_child(panel)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 8)
 	panel.add_child(margin)
 
-	var tab_row := HBoxContainer.new()
-	tab_row.add_theme_constant_override("separation", 32)
-	margin.add_child(tab_row)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	margin.add_child(col)
 
-	_tab_artist = Button.new()
-	_tab_artist.flat = true
-	_tab_artist.text = "艺人"
-	_tab_artist.focus_mode = Control.FOCUS_NONE
-	_tab_artist.pressed.connect(func() -> void: set_active_tab("artist"))
-	tab_row.add_child(_tab_artist)
+	var title := Label.new()
+	title.text = "饭圈热搜"
+	title.add_theme_font_size_override("font_size", 16)
+	col.add_child(title)
 
-	_tab_sister = Button.new()
-	_tab_sister.flat = true
-	_tab_sister.text = "嫂子站"
-	_tab_sister.focus_mode = Control.FOCUS_NONE
-	_tab_sister.pressed.connect(func() -> void: set_active_tab(TAB_SISTER))
-	tab_row.add_child(_tab_sister)
+	_hot_list = VBoxContainer.new()
+	_hot_list.add_theme_constant_override("separation", 4)
+	col.add_child(_hot_list)
 
-	_tab_square = Button.new()
-	_tab_square.flat = true
-	_tab_square.text = "广场"
-	_tab_square.focus_mode = Control.FOCUS_NONE
-	_tab_square.pressed.connect(func() -> void: set_active_tab(TAB_SQUARE))
-	tab_row.add_child(_tab_square)
+	var samples: PackedStringArray = [
+		"1. Beave回归预告",
+		"2. 新歌难听",
+		"3. 新人男团疑似恋爱",
+		"4. 新人男团疑似恋爱",
+		"5. 新人男团疑似恋爱",
+		"6. 新人男团疑似恋爱",
+		"7. 新人男团疑似恋爱",
+		"8. 新人男团疑似恋爱",
+		"9. 新人男团疑似恋爱",
+		"10. 新人男团疑似恋爱",
+	]
+	for line in samples:
+		var l := Label.new()
+		l.text = line
+		l.add_theme_font_size_override("font_size", 13)
+		_hot_list.add_child(l)
 
-	return panel
+
+func _build_p6_hud() -> void:
+	_fp_label = Label.new()
+	_fp_label.position = Vector2(900, 8)
+	_fp_label.add_theme_font_size_override("font_size", 14)
+	_content_root.add_child(_fp_label)
+
+	_stars_label = Label.new()
+	_stars_label.position = Vector2(900, 28)
+	_stars_label.add_theme_font_size_override("font_size", 14)
+	_content_root.add_child(_stars_label)
+
+	_intel_level_label = Label.new()
+	_intel_level_label.position = Vector2(1039, 8)
+	_intel_level_label.add_theme_font_size_override("font_size", 21)
+	_content_root.add_child(_intel_level_label)
 
 
-func _on_feed_tab_changed(_idx: int) -> void:
-	pass
+func _update_layout_visibility() -> void:
+	if _post_area != null:
+		_post_area.visible = _active_tab != TAB_MARKET
+	_refresh_banner_area()
+
+
+func _refresh_banner_area() -> void:
+	if _banner_area == null:
+		return
+	for c in _banner_area.get_children():
+		if c != _banner_hint and c != _banner_intel_label and c != _banner_bar and c != _banner_flash:
+			c.queue_free()
+
+	var placeholder := _banner_area.get_node_or_null("ArtistPlaceholder") as ColorRect
+	if placeholder != null:
+		placeholder.queue_free()
+	if _banner_area.get_node_or_null("MarketBagBtn") != null:
+		_banner_area.get_node_or_null("MarketBagBtn").queue_free()
+
+	_banner_hint.visible = false
+	_banner_intel_label.visible = false
+	_banner_bar.visible = false
+	_banner_flash.visible = false
+
+	match _active_tab:
+		TAB_ARTIST:
+			var rect := ColorRect.new()
+			rect.name = "ArtistPlaceholder"
+			rect.color = Color(0.55, 0.35, 0.82, 0.85)
+			rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			rect.offset_left = 0
+			rect.offset_top = 0
+			rect.offset_right = 0
+			rect.offset_bottom = 0
+			_banner_area.add_child(rect)
+			rect.show_behind_parent = true
+			_banner_area.move_child(rect, 0)
+		TAB_FANDOM:
+			_banner_hint.visible = true
+			_banner_hint.text = "停留阅读帖子获得饭圈积分"
+			_banner_bar.visible = true
+			_banner_bar.value = 0.0
+		TAB_SISTER:
+			_banner_intel_label.visible = true
+			_banner_bar.visible = true
+			_update_sister_banner_intel_text()
+			var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+			if expose != null and expose.consume_pending_intel_level_up():
+				_play_intel_level_flash()
+		TAB_ACCOUNT:
+			var rect := ColorRect.new()
+			rect.name = "ArtistPlaceholder"
+			rect.color = Color(0.75, 0.72, 0.88, 0.85)
+			rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+			_banner_area.add_child(rect)
+			rect.show_behind_parent = true
+			_banner_area.move_child(rect, 0)
+		TAB_MARKET:
+			var bag_btn := Button.new()
+			bag_btn.name = "MarketBagBtn"
+			bag_btn.text = "背包"
+			bag_btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+			bag_btn.offset_left = 0
+			bag_btn.offset_top = 0
+			bag_btn.offset_right = 0
+			bag_btn.offset_bottom = 0
+			bag_btn.pressed.connect(_on_market_bag_pressed)
+			_banner_area.add_child(bag_btn)
+
+
+func _update_sister_banner_intel_text() -> void:
+	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if sm == null or _banner_intel_label == null:
+		return
+	var threshold: int = expose.get_next_intel_threshold() if expose != null else 0
+	if threshold <= 0:
+		_banner_intel_label.text = "情报点 %d / MAX" % sm.intel
+	else:
+		_banner_intel_label.text = "情报点 %d / %d" % [sm.intel, threshold]
+
+
+func _play_intel_level_flash() -> void:
+	if _banner_flash == null:
+		return
+	_banner_flash.visible = true
+	_banner_flash.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_property(_banner_flash, "modulate:a", 0.2, 0.35)
+	tw.tween_property(_banner_flash, "modulate:a", 1.0, 0.35)
+	tw.tween_property(_banner_flash, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func() -> void:
+		if _banner_flash != null:
+			_banner_flash.visible = false
+	)
+
+
+func _on_market_bag_pressed() -> void:
+	_show_toast("背包功能 M3 开放")
+
+
+func _show_toast(msg: String) -> void:
+	if _toast_label == null:
+		return
+	_toast_label.text = msg
+	_toast_label.position = Vector2(400, 340)
+	_toast_label.visible = true
+	var tw := create_tween()
+	tw.tween_interval(1.8)
+	tw.tween_callback(func() -> void:
+		if _toast_label != null:
+			_toast_label.visible = false
+	)
 
 
 func _set_tab_visual() -> void:
-	if _tab_artist == null:
-		return
-	var active := Color(0.17, 0.14, 0.24, 1)
-	var inactive := Color(0.55, 0.51, 0.64, 1)
-	for pair in [
-		[_tab_artist, TAB_ARTIST],
-		[_tab_square, TAB_SQUARE],
-		[_tab_sister, TAB_SISTER],
-	]:
-		var btn: Button = pair[0]
-		var name: String = pair[1]
-		var on := _active_tab == name
-		btn.add_theme_font_size_override("font_size", 20 if on else 18)
-		btn.add_theme_color_override("font_color", active if on else inactive)
+	var active_color := Color(0.17, 0.14, 0.24, 1)
+	var inactive_color := Color(0.55, 0.51, 0.64, 1)
+	for tab_id: String in _tab_buttons.keys():
+		var btn: Button = _tab_buttons[tab_id]
+		var on: bool = _active_tab == tab_id
+		btn.add_theme_font_size_override("font_size", 18 if on else 16)
+		btn.add_theme_color_override("font_color", active_color if on else inactive_color)
 
 
 func refresh_feed() -> void:
@@ -295,31 +550,23 @@ func refresh_feed() -> void:
 	for c in _list_box.get_children():
 		c.queue_free()
 
-	if _active_tab == TAB_ARTIST:
-		_refresh_artist_tab()
-	else:
-		_refresh_instance_tab(_tabtype_for_name(_active_tab))
+	match _active_tab:
+		TAB_ARTIST:
+			_refresh_artist_tab()
+		TAB_FANDOM, TAB_SISTER:
+			_refresh_instance_tab(_exposure_tabtype_for_name(_active_tab))
+		TAB_ACCOUNT, TAB_MARKET:
+			var tip := Label.new()
+			tip.text = "敬请期待"
+			tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
+			_list_box.add_child(tip)
 
 
 func _refresh_artist_tab() -> void:
 	var save_manager: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
 	var chapter_manager: ChapterManager = get_node_or_null("/root/ChapterManagerSingleton") as ChapterManager
 	var condition_checker: ConditionChecker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
-	#region agent log
-	_agent_debug_log("H2", "feed_page.gd:_refresh_artist_tab", "entry", {
-		"active_tab": _active_tab,
-		"posts_raw_count": _posts_raw.size(),
-		"save_ok": save_manager != null,
-		"chapter_ok": chapter_manager != null,
-		"checker_ok": condition_checker != null,
-		"intellevel": save_manager.intellevel if save_manager else -1,
-		"fanlevel": save_manager.fanlevel if save_manager else -1,
-	})
-	#endregion
 	if save_manager == null or chapter_manager == null or condition_checker == null:
-		#region agent log
-		_agent_debug_log("H2", "feed_page.gd:_refresh_artist_tab", "early_return_missing_autoload", {})
-		#endregion
 		return
 
 	var enriched: Array = []
@@ -329,40 +576,21 @@ func _refresh_artist_tab() -> void:
 		var post: Dictionary = (item as Dictionary).duplicate(true)
 		if int(post.get("type", 0)) != TYPE_ARTIST:
 			continue
-		var visible: bool = condition_checker.is_feed_post_visible(post)
-		#region agent log
-		_agent_debug_log("H1", "feed_page.gd:_refresh_artist_tab", "post_filter", {
-			"post_id": str(post.get("post_id", "")),
-			"condition_id": int(post.get("condition_id", 0)),
-			"visible": visible,
-		})
-		#endregion
-		if not visible:
+		if not condition_checker.is_feed_post_visible(post):
 			continue
 		var e: Dictionary = _enrich_post(post, chapter_manager)
 		if e.is_empty():
-			#region agent log
-			_agent_debug_log("H4", "feed_page.gd:_refresh_artist_tab", "enrich_failed", {
-				"post_id": str(post.get("post_id", "")),
-				"level_id": str(post.get("level_id", "")),
-			})
-			#endregion
 			continue
 		var chapter_levels: Array = e.get("_chapter_levels", [])
 		e["_locked"] = condition_checker.is_feed_post_locked_visible(post, chapter_levels)
 		enriched.append(e)
 
 	_sort_artist_list(enriched, save_manager, chapter_manager)
-	#region agent log
-	_agent_debug_log("H1", "feed_page.gd:_refresh_artist_tab", "result", {
-		"enriched_count": enriched.size(),
-		"show_empty_tip": enriched.is_empty(),
-	})
-	#endregion
 
 	if enriched.is_empty():
 		var tip := Label.new()
 		tip.text = "暂无艺人动态（提升情报等级解锁）"
+		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
 		_list_box.add_child(tip)
 		return
@@ -370,7 +598,7 @@ func _refresh_artist_tab() -> void:
 	for e in enriched:
 		var card: Node = CARD_SCENE.instantiate()
 		if card is Control:
-			(card as Control).custom_minimum_size.x = LIST_W
+			(card as Control).custom_minimum_size.x = P4_RECT.size.x
 		_list_box.add_child(card)
 		if card.has_method("setup"):
 			card.call("setup", _card_view_dict(e))
@@ -389,44 +617,105 @@ func _refresh_instance_tab(tabtype: int) -> void:
 	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
 	if expose == null:
 		return
+	var fp_side := tabtype == TABTYPE_FANDOM
 	for inst in expose.get_instances_for_tab(tabtype):
 		if not (inst is Dictionary):
 			continue
-		var row: PanelContainer = PanelContainer.new()
-		row.custom_minimum_size = Vector2(LIST_W, 72)
-		var h := HBoxContainer.new()
-		row.add_child(h)
-		var tpl: Dictionary = expose.get_template(str(inst.get("postid", "")))
+		var inst_dict: Dictionary = inst as Dictionary
+		var tpl: Dictionary = expose.get_template(str(inst_dict.get("postid", "")))
+		var row := PanelContainer.new()
+		row.custom_minimum_size = Vector2(P4_RECT.size.x, 64)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(1, 1, 1, 0.88)
+		style.corner_radius_top_left = 4
+		style.corner_radius_top_right = 4
+		style.corner_radius_bottom_left = 4
+		style.corner_radius_bottom_right = 4
+		row.add_theme_stylebox_override("panel", style)
+
+		var margin := MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 10)
+		margin.add_theme_constant_override("margin_top", 8)
+		margin.add_theme_constant_override("margin_right", 10)
+		margin.add_theme_constant_override("margin_bottom", 8)
+		row.add_child(margin)
+
+		var vbox := VBoxContainer.new()
+		vbox.add_theme_constant_override("separation", 4)
+		margin.add_child(vbox)
+
 		var title := Label.new()
-		title.text = str(tpl.get("title", inst.get("postid", "")))
-		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(title)
-		var status := Label.new()
-		status.text = str(inst.get("exposestatus", "idle"))
-		h.add_child(status)
-		var expose_btn := Button.new()
-		expose_btn.text = "曝光"
-		var iid: String = str(inst.get("instanceid", ""))
-		expose_btn.pressed.connect(func() -> void:
-			expose.start_expose(iid)
-			refresh_feed()
-		)
-		h.add_child(expose_btn)
-		var collect_btn := Button.new()
-		collect_btn.text = "收取"
-		collect_btn.pressed.connect(func() -> void:
-			if expose.collect_instance(iid):
-				var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
-				if tutor != null:
-					tutor.notify_instance_collected()
-			refresh_feed()
-		)
-		h.add_child(collect_btn)
+		title.text = str(tpl.get("title", inst_dict.get("postid", "")))
+		vbox.add_child(title)
+
+		var reward := Label.new()
+		var collected: bool = bool(inst_dict.get("fpcollected" if fp_side else "intelcollected", false))
+		var amount: int = int(tpl.get("grantfp" if fp_side else "grantintel", 0))
+		if collected or amount <= 0:
+			reward.text = "已收取"
+			reward.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55, 1))
+			style.bg_color = Color(0.92, 0.92, 0.94, 0.88)
+		else:
+			var unit := "饭圈积分" if fp_side else "情报点"
+			reward.text = "+%d %s" % [amount, unit]
+		vbox.add_child(reward)
 		_list_box.add_child(row)
+
 	if _list_box.get_child_count() == 0:
 		var tip := Label.new()
 		tip.text = "暂无放置帖子"
 		_list_box.add_child(tip)
+
+
+func _on_banner_progress(tabtype: int, ratio: float) -> void:
+	if _banner_bar == null:
+		return
+	if tabtype != _exposure_tabtype_for_name(_active_tab):
+		return
+	_banner_bar.visible = true
+	_banner_bar.value = ratio
+
+
+func _on_lump_granted(tabtype: int, _grant_type: int, amount: int) -> void:
+	_update_currency_hud()
+	if tabtype == TABTYPE_SISTER:
+		_update_sister_banner_intel_text()
+	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
+	if tutor != null and tabtype == TABTYPE_SISTER and amount > 0:
+		if tutor.get_step() == 1:
+			tutor.advance_step()
+		if tutor.get_step() == 2:
+			tutor.notify_instance_collected()
+	refresh_feed()
+
+
+func _on_intel_level_up(_new_level: int) -> void:
+	_update_currency_hud()
+	_update_sister_banner_intel_text()
+	if _active_tab == TAB_SISTER:
+		_play_intel_level_flash()
+	else:
+		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+		if expose != null:
+			expose.consume_pending_intel_level_up()
+	refresh_feed()
+
+
+func _on_instance_changed() -> void:
+	refresh_feed()
+
+
+func _update_currency_hud() -> void:
+	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if sm == null:
+		return
+	if _fp_label != null:
+		_fp_label.text = "饭圈积分 %d" % sm.fp
+	if _stars_label != null:
+		_stars_label.text = "星星 %d" % sm.stars
+	if _intel_level_label != null:
+		_intel_level_label.text = "情报等级 lv.%d" % sm.intellevel
+	_update_sister_banner_intel_text()
 
 
 func _enrich_post(post: Dictionary, chapter_manager: ChapterManager) -> Dictionary:
@@ -499,29 +788,6 @@ func _artist_rank(
 	return [tier, -level_order, post_id]
 
 
-# 从 post_id 提取第一段连续数字，如 fans_12_post → 12
-func _extract_fan_post_id_number(post_id: String) -> int:
-	var digits := ""
-	for i in range(post_id.length()):
-		var ch := post_id[i]
-		if ch >= "0" and ch <= "9":
-			digits += ch
-		elif not digits.is_empty():
-			break
-	if digits.is_empty():
-		return 0
-	return int(digits)
-
-
-func _sort_fans_list(items: Array) -> void:
-	# 粉丝帖：post_id 数字部分倒序，数字大的在最上面
-	items.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var na := _extract_fan_post_id_number(str(a.get("post_id", "")))
-		var nb := _extract_fan_post_id_number(str(b.get("post_id", "")))
-		if na != nb:
-			return na > nb
-		return str(a.get("post_id", "")) > str(b.get("post_id", ""))
-	)
 func _current_level_id(save_manager: SaveManager, chapter_manager: ChapterManager) -> String:
 	var best_order: int = -1
 	var best_id: String = ""
@@ -605,12 +871,17 @@ func _on_pin_toggled(post_id: String, is_pinned: bool, save_manager: SaveManager
 
 
 func _on_scroll_gui_input(event: InputEvent) -> void:
+	var scrolled_down := false
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			scrolled_down = true
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			_manual_dragging = mb.pressed
 	elif event is InputEventMouseMotion and _manual_dragging and _scroll != null:
 		var mm := event as InputEventMouseMotion
+		if mm.relative.y > 0.5:
+			scrolled_down = true
 		var next_v: float = _scroll.scroll_vertical - mm.relative.y
 		var max_v: int = 0
 		if _scroll.get_v_scroll_bar() != null:
@@ -621,11 +892,19 @@ func _on_scroll_gui_input(event: InputEvent) -> void:
 		_manual_dragging = st.pressed
 	elif event is InputEventScreenDrag and _manual_dragging and _scroll != null:
 		var sd := event as InputEventScreenDrag
+		if sd.relative.y > 0.5:
+			scrolled_down = true
 		var next_v_touch: float = _scroll.scroll_vertical - sd.relative.y
 		var max_v_touch: int = 0
 		if _scroll.get_v_scroll_bar() != null:
 			max_v_touch = int(_scroll.get_v_scroll_bar().max_value)
 		_scroll.scroll_vertical = clampi(int(next_v_touch), 0, max_v_touch)
+
+	if scrolled_down and not _scroll_started:
+		_scroll_started = true
+		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+		if expose != null:
+			expose.notify_list_scrolled(_exposure_tabtype_for_name(_active_tab))
 
 
 func _play_heart_effect(anchor: Node, anchor_global: Vector2 = Vector2.ZERO) -> void:
@@ -658,25 +937,3 @@ func _play_heart_effect(anchor: Node, anchor_global: Vector2 = Vector2.ZERO) -> 
 	tw_fallback.tween_property(heart_label, "position:y", heart_label.position.y - 18, 0.35)
 	tw_fallback.parallel().tween_property(heart_label, "modulate:a", 0.0, 0.35)
 	tw_fallback.tween_callback(heart_label.queue_free)
-
-
-#region agent log
-func _agent_debug_log(hypothesis_id: String, location: String, message: String, data: Dictionary) -> void:
-	var payload := {
-		"sessionId": "580f3e",
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000,
-		"runId": "pre-fix",
-	}
-	var file := FileAccess.open("res://debug-580f3e.log", FileAccess.READ_WRITE)
-	if file == null:
-		file = FileAccess.open("res://debug-580f3e.log", FileAccess.WRITE)
-	if file == null:
-		return
-	file.seek_end()
-	file.store_string(JSON.stringify(payload) + "\n")
-	file.close()
-#endregion

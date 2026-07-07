@@ -18,7 +18,7 @@
   {
     "tabtype": 904,
     "activedurationsec": 30,
-    "activegranttype": 23,
+    "activegranttype": 22,
     "activegrantamt": 1,
     "offlinedurationsec": 300,
     "offlinemaxsec": 28800

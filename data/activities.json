@@ -112,24 +112,5 @@
     "stexpmid": 25,
     "stexphigh": 35,
     "opinionlock": 1
-  },
-  {
-    "activityid": "7",
-    "name": "教程签售",
-    "category": 3,
-    "conditionid": 5,
-    "costfp": 0,
-    "costitemid": 0,
-    "costitemcount": 0,
-    "outputposttype1": 101,
-    "outputposttype2": 0,
-    "drawcount": 1,
-    "refreshmarket": 0,
-    "tutorialonly": 1,
-    "sort": 7,
-    "stexplow": 10,
-    "stexpmid": 20,
-    "stexphigh": 30,
-    "opinionlock": 0
   }
 ]

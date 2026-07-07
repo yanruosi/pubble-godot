@@ -2,7 +2,7 @@ extends Node
 class_name SaveManager
 
 const SAVE_PATH := "user://progress.cfg"
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 
 const CAT_FP := 22
 const CAT_STARS := 23
@@ -84,11 +84,40 @@ func load_progress() -> void:
 	level_progress = _as_dict(config.get_value("level", "progress", {}))
 	level_hotspot_clicked = _as_dict(config.get_value("level_hotspot", "clicked", {}))
 	inventory = _as_dict(config.get_value("inventory", "items", {}))
-	feed_instances = _as_array(config.get_value("instances", "feed", []))
+	feed_instances = _normalize_feed_instances(_as_array(config.get_value("instances", "feed", [])))
 	banner_last_offline_ts = int(config.get_value("banner", "last_offline_ts", 0))
 	_instance_id_counter = int(config.get_value("instances", "id_counter", 0))
 	feed_seen = _as_dict(config.get_value("feed", "seen", {}))
 	feed_pinned_post_id = str(config.get_value("feed", "pinned_post_id", ""))
+
+
+func normalize_feed_instances(raw: Array) -> Array:
+	return _normalize_feed_instances(raw)
+
+
+func _normalize_feed_instances(raw: Array) -> Array:
+	var out: Array = []
+	for item in raw:
+		if not (item is Dictionary):
+			continue
+		var inst: Dictionary = (item as Dictionary).duplicate(true)
+		if inst.has("tabsource"):
+			inst["fpcollected"] = bool(inst.get("fpcollected", false))
+			inst["intelcollected"] = bool(inst.get("intelcollected", false))
+			out.append(inst)
+			continue
+		var postid: String = str(inst.get("postid", ""))
+		var tabsource: int = int(inst.get("tabsource", inst.get("tabtype", 903)))
+		var normalized := {
+			"instanceid": str(inst.get("instanceid", "")),
+			"postid": postid,
+			"tabsource": tabsource,
+			"createdat": int(inst.get("createdat", int(Time.get_unix_time_from_system()))),
+			"fpcollected": bool(inst.get("fpcollected", false)),
+			"intelcollected": bool(inst.get("intelcollected", false)),
+		}
+		out.append(normalized)
+	return out
 
 
 func _apply_defaults_after_fresh_save() -> void:

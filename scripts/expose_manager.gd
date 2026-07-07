@@ -3,22 +3,28 @@ class_name ExposeManager
 
 const POST_TEMPLATES_PATH := "res://data/post_templates.json"
 const BANNER_CONFIG_PATH := "res://data/banner_config.json"
+const INTEL_LEVELS_PATH := "res://data/intel_levels.json"
 
-const STATUS_IDLE := "idle"
-const STATUS_EXPOSING := "exposing"
-const STATUS_READY := "ready"
+const TAB_FANDOM := 0
+const TAB_SISTER := 903
+
+const CAT_FP := 22
+const CAT_INTEL := 24
 
 var _save_manager: SaveManager
 var _economy_manager: EconomyManager
 var _templates_by_id: Dictionary = {}
 var _banner_by_tab: Dictionary = {}
+var _intel_levels: Array = []
 
 var _active_tabtype: int = -1
-var _active_elapsed: float = 0.0
-var _banner_progress: float = 0.0
+var _countdown_started: bool = false
+var _countdown_elapsed: float = 0.0
+var _pending_intel_level_up: bool = false
 
 signal banner_progress_changed(tabtype: int, ratio: float)
-signal banner_reward_granted(tabtype: int, grant_type: int, amount: int)
+signal lump_granted(tabtype: int, grant_type: int, amount: int)
+signal intel_level_up(new_level: int)
 signal instance_changed
 
 
@@ -37,6 +43,7 @@ func _load_tables() -> void:
 	for row in _read_json_array(BANNER_CONFIG_PATH):
 		if row is Dictionary:
 			_banner_by_tab[int(row.get("tabtype", -1))] = row
+	_intel_levels = _read_json_array(INTEL_LEVELS_PATH)
 
 
 func _read_json_array(path: String) -> Array:
@@ -49,8 +56,12 @@ func _read_json_array(path: String) -> Array:
 
 
 func on_game_loaded() -> void:
-	_apply_offline_banner_rewards()
-	_refresh_instance_ready_states()
+	if _save_manager == null:
+		return
+	_save_manager.feed_instances = _save_manager.normalize_feed_instances(_save_manager.feed_instances)
+	if _save_manager.banner_last_offline_ts <= 0:
+		_save_manager.banner_last_offline_ts = int(Time.get_unix_time_from_system())
+		_save_manager.save_progress()
 
 
 func seed_tutorial_instance() -> void:
@@ -62,19 +73,22 @@ func seed_tutorial_instance() -> void:
 	if not _templates_by_id.has(TUTORIAL_SEED_POSTID):
 		push_warning("ExposeManager: tutorial template %s missing" % TUTORIAL_SEED_POSTID)
 		return
-	add_instance(TUTORIAL_SEED_POSTID, 903)
+	add_instance(TUTORIAL_SEED_POSTID)
 
 
-func add_instance(postid: String, tabtype: int) -> Dictionary:
+func add_instance(postid: String, tabsource: int = -1) -> Dictionary:
 	if _save_manager == null or postid.is_empty():
 		return {}
+	var tpl: Dictionary = _templates_by_id.get(postid, {})
+	if tabsource < 0:
+		tabsource = int(tpl.get("tabtype", TAB_SISTER))
 	var inst := {
 		"instanceid": _save_manager.next_instance_id(),
 		"postid": postid,
-		"tabtype": tabtype,
-		"exposestatus": STATUS_IDLE,
-		"exposeendts": 0,
+		"tabsource": tabsource,
 		"createdat": int(Time.get_unix_time_from_system()),
+		"fpcollected": int(tpl.get("grantfp", 0)) <= 0,
+		"intelcollected": int(tpl.get("grantintel", 0)) <= 0,
 	}
 	_save_manager.feed_instances.append(inst)
 	_save_manager.save_progress()
@@ -87,163 +101,262 @@ func get_instances_for_tab(tabtype: int) -> Array:
 		return []
 	var out: Array = []
 	for item in _save_manager.feed_instances:
-		if item is Dictionary and int(item.get("tabtype", -1)) == tabtype:
+		if not (item is Dictionary):
+			continue
+		if _is_visible_on_tab(item as Dictionary, tabtype):
 			out.append(item)
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("createdat", 0)) > int(b.get("createdat", 0))
+	)
 	return out
-
-
-func start_expose(instanceid: String) -> bool:
-	var inst: Dictionary = _find_instance(instanceid)
-	if inst.is_empty():
-		return false
-	var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
-	var duration: int = int(tpl.get("durationsec", 0))
-	var now: int = int(Time.get_unix_time_from_system())
-	if duration <= 0:
-		inst["exposestatus"] = STATUS_READY
-		inst["exposeendts"] = now
-	else:
-		inst["exposestatus"] = STATUS_EXPOSING
-		inst["exposeendts"] = now + duration
-	_save_manager.save_progress()
-	instance_changed.emit()
-	return true
-
-
-func collect_instance(instanceid: String) -> bool:
-	var inst: Dictionary = _find_instance(instanceid)
-	if inst.is_empty():
-		return false
-	_refresh_single_instance(inst)
-	if str(inst.get("exposestatus", "")) != STATUS_READY:
-		return false
-	var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
-	if _economy_manager != null:
-		if int(tpl.get("grantfp", 0)) > 0:
-			_economy_manager.add_currency(22, int(tpl.get("grantfp", 0)), "collect")
-		if int(tpl.get("grantintel", 0)) > 0:
-			_economy_manager.add_currency(24, int(tpl.get("grantintel", 0)), "collect")
-		if int(tpl.get("grantstars", 0)) > 0:
-			_economy_manager.add_currency(23, int(tpl.get("grantstars", 0)), "collect")
-	_remove_instance(instanceid)
-	return true
 
 
 func get_template(postid: String) -> Dictionary:
 	return _templates_by_id.get(postid, {}).duplicate(true)
 
 
-func start_active_timer(tabtype: int) -> void:
+func get_next_intel_threshold() -> int:
+	if _save_manager == null:
+		return 0
+	var next_level: int = _save_manager.intellevel + 1
+	for row in _intel_levels:
+		if row is Dictionary and int(row.get("level", -1)) == next_level:
+			return int(row.get("thresholdintel", 0))
+	return 0
+
+
+func consume_pending_intel_level_up() -> bool:
+	if not _pending_intel_level_up:
+		return false
+	_pending_intel_level_up = false
+	return true
+
+
+func on_tab_entered(tabtype: int) -> void:
+	if not _supports_exposure_tab(tabtype):
+		return
 	_active_tabtype = tabtype
-	_active_elapsed = 0.0
-	_banner_progress = 0.0
+	_reset_countdown()
+	var lump: int = _grant_lump_on_enter(tabtype)
+	if lump > 0:
+		var grant_type: int = _grant_type_for_tab(tabtype)
+		lump_granted.emit(tabtype, grant_type, lump)
+		instance_changed.emit()
+
+
+func on_tab_left(tabtype: int) -> void:
+	if tabtype != _active_tabtype:
+		return
+	_active_tabtype = -1
+	_reset_countdown()
 	banner_progress_changed.emit(tabtype, 0.0)
 
 
-func on_tab_left() -> void:
-	_active_tabtype = -1
-	_active_elapsed = 0.0
-	_banner_progress = 0.0
+func notify_list_scrolled(tabtype: int) -> void:
+	if tabtype != _active_tabtype or not _supports_exposure_tab(tabtype):
+		return
+	if _countdown_started:
+		return
+	_countdown_started = true
+	_countdown_elapsed = 0.0
+	banner_progress_changed.emit(tabtype, 0.0)
 
 
 func get_banner_progress(tabtype: int) -> float:
-	if tabtype != _active_tabtype:
+	if tabtype != _active_tabtype or not _countdown_started:
 		return 0.0
-	return _banner_progress
+	var duration: float = _countdown_duration(tabtype)
+	if duration <= 0.0:
+		return 0.0
+	return clampf(_countdown_elapsed / duration, 0.0, 1.0)
 
 
 func _process(delta: float) -> void:
-	if _active_tabtype < 0:
+	if not _countdown_started or _active_tabtype < 0:
 		return
-	var cfg: Dictionary = _banner_by_tab.get(_active_tabtype, {})
-	var duration: float = float(int(cfg.get("activedurationsec", 30)))
+	var duration: float = _countdown_duration(_active_tabtype)
 	if duration <= 0.0:
 		return
-	_active_elapsed += delta
-	_banner_progress = clampf(_active_elapsed / duration, 0.0, 1.0)
-	banner_progress_changed.emit(_active_tabtype, _banner_progress)
-	if _banner_progress >= 1.0:
-		_grant_active_banner(_active_tabtype)
-		_active_elapsed = 0.0
-		_banner_progress = 0.0
-		banner_progress_changed.emit(_active_tabtype, 0.0)
+	_countdown_elapsed += delta
+	var ratio: float = clampf(_countdown_elapsed / duration, 0.0, 1.0)
+	banner_progress_changed.emit(_active_tabtype, ratio)
+	if ratio >= 1.0:
+		_on_countdown_complete(_active_tabtype)
 
 
-func _grant_active_banner(tabtype: int) -> void:
+func _on_countdown_complete(tabtype: int) -> void:
+	var inst: Dictionary = _find_earliest_uncollected(tabtype)
+	if not inst.is_empty():
+		var amount: int = _grant_instance_side(inst, tabtype)
+		if amount > 0:
+			lump_granted.emit(tabtype, _grant_type_for_tab(tabtype), amount)
+		_save_manager.save_progress()
+		instance_changed.emit()
+		if _has_uncollected_on_tab(tabtype):
+			_restart_countdown()
+		else:
+			_reset_countdown()
+		return
 	var cfg: Dictionary = _banner_by_tab.get(tabtype, {})
-	if cfg.is_empty() or _economy_manager == null:
-		return
 	var grant_type: int = int(cfg.get("activegranttype", 0))
-	var amount: int = int(cfg.get("activegrantamt", 0))
-	if grant_type <= 0 or amount <= 0:
-		return
-	_economy_manager.add_currency(grant_type, amount, "banner_active")
-	banner_reward_granted.emit(tabtype, grant_type, amount)
+	var fallback_amount: int = int(cfg.get("activegrantamt", 0))
+	if fallback_amount > 0 and grant_type > 0 and _economy_manager != null:
+		_economy_manager.add_currency(grant_type, fallback_amount, "banner_active")
+		lump_granted.emit(tabtype, grant_type, fallback_amount)
+		if grant_type == CAT_INTEL:
+			_auto_upgrade_intel()
+	_restart_countdown()
 
 
-func _apply_offline_banner_rewards() -> void:
+func _grant_lump_on_enter(tabtype: int) -> int:
 	if _save_manager == null or _economy_manager == null:
-		return
+		return 0
+	var total: int = 0
+	var grant_type: int = _grant_type_for_tab(tabtype)
+
 	var now: int = int(Time.get_unix_time_from_system())
 	var last: int = _save_manager.banner_last_offline_ts
 	if last <= 0:
 		last = now
 	var elapsed: int = now - last
-	for tabtype in _banner_by_tab.keys():
-		var cfg: Dictionary = _banner_by_tab[tabtype]
+	var cfg: Dictionary = _banner_by_tab.get(tabtype, {})
+	var offline_sec: int = int(cfg.get("offlinedurationsec", 150))
+	if offline_sec > 0:
 		var max_sec: int = int(cfg.get("offlinemaxsec", 28800))
-		var offline_sec: int = int(cfg.get("offlinedurationsec", 150))
-		if offline_sec <= 0:
-			continue
 		var capped: int = mini(elapsed, max_sec)
-		var times: int = capped / offline_sec
-		if times <= 0:
-			continue
-		var grant_type: int = int(cfg.get("activegranttype", 0))
-		var amount: int = int(cfg.get("activegrantamt", 0)) * times
-		if grant_type > 0 and amount > 0:
-			_economy_manager.add_currency(grant_type, amount, "banner_offline")
-	_save_manager.banner_last_offline_ts = now
-	_save_manager.save_progress()
+		var times: int = floori(float(capped) / float(offline_sec))
+		if times > 0:
+			total += int(cfg.get("activegrantamt", 0)) * times
 
-
-func _refresh_instance_ready_states() -> void:
-	if _save_manager == null:
-		return
-	var now: int = int(Time.get_unix_time_from_system())
 	for item in _save_manager.feed_instances:
-		if item is Dictionary:
-			_refresh_single_instance(item, now)
-	_save_manager.save_progress()
+		if not (item is Dictionary):
+			continue
+		var inst: Dictionary = item as Dictionary
+		if _is_side_collected(inst, tabtype):
+			continue
+		if not _is_visible_on_tab(inst, tabtype):
+			continue
+		var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
+		if int(tpl.get("durationsec", 0)) != 0:
+			continue
+		var amount: int = _grant_amount_for_side(tpl, tabtype)
+		if amount <= 0:
+			continue
+		total += amount
+		_mark_side_collected(inst, tabtype)
+
+	if total > 0:
+		_economy_manager.add_currency(grant_type, total, "lump_enter")
+		if grant_type == CAT_INTEL:
+			_auto_upgrade_intel()
+		_save_manager.save_progress()
+	return total
 
 
-func _refresh_single_instance(inst: Dictionary, now: int = -1) -> void:
-	if now < 0:
-		now = int(Time.get_unix_time_from_system())
-	var status: String = str(inst.get("exposestatus", STATUS_IDLE))
-	if status == STATUS_EXPOSING and int(inst.get("exposeendts", 0)) <= now:
-		inst["exposestatus"] = STATUS_READY
+func _grant_instance_side(inst: Dictionary, tabtype: int) -> int:
+	if _economy_manager == null:
+		return 0
+	var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
+	var amount: int = _grant_amount_for_side(tpl, tabtype)
+	if amount <= 0:
+		return 0
+	var grant_type: int = _grant_type_for_tab(tabtype)
+	_economy_manager.add_currency(grant_type, amount, "countdown_collect")
+	_mark_side_collected(inst, tabtype)
+	if grant_type == CAT_INTEL:
+		_auto_upgrade_intel()
+	return amount
 
 
-func _find_instance(instanceid: String) -> Dictionary:
+func _auto_upgrade_intel() -> void:
+	if _economy_manager == null or _save_manager == null:
+		return
+	while _economy_manager.try_upgrade_intel():
+		_pending_intel_level_up = true
+		intel_level_up.emit(_save_manager.intellevel)
+
+
+func _find_earliest_uncollected(tabtype: int) -> Dictionary:
 	if _save_manager == null:
 		return {}
+	var best: Dictionary = {}
+	var best_ts: int = 2147483647
 	for item in _save_manager.feed_instances:
-		if item is Dictionary and str(item.get("instanceid", "")) == instanceid:
-			return item
-	return {}
+		if not (item is Dictionary):
+			continue
+		var inst: Dictionary = item as Dictionary
+		if _is_side_collected(inst, tabtype):
+			continue
+		if not _is_visible_on_tab(inst, tabtype):
+			continue
+		var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
+		if _grant_amount_for_side(tpl, tabtype) <= 0:
+			continue
+		var ts: int = int(inst.get("createdat", 0))
+		if ts < best_ts:
+			best_ts = ts
+			best = inst
+	return best
 
 
-func _remove_instance(instanceid: String) -> void:
-	if _save_manager == null:
-		return
-	var kept: Array = []
-	for item in _save_manager.feed_instances:
-		if item is Dictionary and str(item.get("instanceid", "")) != instanceid:
-			kept.append(item)
-	_save_manager.feed_instances = kept
-	_save_manager.save_progress()
-	instance_changed.emit()
+func _has_uncollected_on_tab(tabtype: int) -> bool:
+	return not _find_earliest_uncollected(tabtype).is_empty()
+
+
+func _supports_exposure_tab(tabtype: int) -> bool:
+	return tabtype == TAB_FANDOM or tabtype == TAB_SISTER
+
+
+func _is_visible_on_tab(inst: Dictionary, tabtype: int) -> bool:
+	if tabtype == TAB_FANDOM:
+		return true
+	if tabtype == TAB_SISTER:
+		return int(inst.get("tabsource", -1)) == TAB_SISTER
+	return false
+
+
+func _is_side_collected(inst: Dictionary, tabtype: int) -> bool:
+	if tabtype == TAB_FANDOM:
+		return bool(inst.get("fpcollected", false))
+	if tabtype == TAB_SISTER:
+		return bool(inst.get("intelcollected", false))
+	return true
+
+
+func _mark_side_collected(inst: Dictionary, tabtype: int) -> void:
+	if tabtype == TAB_FANDOM:
+		inst["fpcollected"] = true
+	elif tabtype == TAB_SISTER:
+		inst["intelcollected"] = true
+
+
+func _grant_type_for_tab(tabtype: int) -> int:
+	if tabtype == TAB_SISTER:
+		return CAT_INTEL
+	return CAT_FP
+
+
+func _grant_amount_for_side(tpl: Dictionary, tabtype: int) -> int:
+	if tabtype == TAB_SISTER:
+		return int(tpl.get("grantintel", 0))
+	return int(tpl.get("grantfp", 0))
+
+
+func _countdown_duration(tabtype: int) -> float:
+	var cfg: Dictionary = _banner_by_tab.get(tabtype, {})
+	return float(int(cfg.get("activedurationsec", 30)))
+
+
+func _reset_countdown() -> void:
+	_countdown_started = false
+	_countdown_elapsed = 0.0
+
+
+func _restart_countdown() -> void:
+	_countdown_started = true
+	_countdown_elapsed = 0.0
+	if _active_tabtype >= 0:
+		banner_progress_changed.emit(_active_tabtype, 0.0)
 
 
 func notify_app_closing() -> void:

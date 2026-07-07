@@ -38,20 +38,20 @@ func _build_ui() -> void:
 	box.add_theme_constant_override("separation", 6)
 	scroll.add_child(box)
 
-	box.add_child(_label("Debug Panel (F12)"))
-	box.add_child(_btn("+10 FP", func() -> void: _add_currency(22, 10)))
-	box.add_child(_btn("+10 Intel", func() -> void: _add_currency(24, 10)))
-	box.add_child(_btn("+3 Stars", func() -> void: _add_currency(23, 3)))
-	box.add_child(_btn("Upgrade Intel", func() -> void: _upgrade_intel()))
-	box.add_child(_btn("Upgrade Fan", func() -> void: _upgrade_fan()))
-	box.add_child(_btn("Buy Offer 1", func() -> void: _buy_offer(1)))
-	box.add_child(_btn("Activity Airport 1", func() -> void: _act("1")))
-	box.add_child(_btn("Activity Sign 7", func() -> void: _act("7")))
-	box.add_child(_btn("Collect All Ready", func() -> void: _collect_all()))
-	box.add_child(_btn("Reset Progress", func() -> void: _reset()))
-	box.add_child(_btn("Close", func() -> void: _toggle()))
+	box.add_child(_label("调试面板 (F12)"))
+	box.add_child(_btn("+10 饭圈积分", func() -> void: _add_currency(22, 10)))
+	box.add_child(_btn("+10 情报点", func() -> void: _add_currency(24, 10)))
+	box.add_child(_btn("+3 星星", func() -> void: _add_currency(23, 3)))
+	box.add_child(_btn("升级情报等级", func() -> void: _upgrade_intel()))
+	box.add_child(_btn("升级会员等级", func() -> void: _upgrade_fan()))
+	box.add_child(_btn("购买教程专辑", func() -> void: _buy_offer(1)))
+	box.add_child(_btn("活动·机场1", func() -> void: _act("1")))
+	box.add_child(_btn("活动·签售7", func() -> void: _act("7")))
+	box.add_child(_btn("收取全部放置帖", func() -> void: _collect_all()))
+	box.add_child(_btn("重置存档", func() -> void: _reset()))
+	box.add_child(_btn("关闭", func() -> void: _toggle()))
 
-	_panel.set_meta("status_label", _label("status"))
+	_panel.set_meta("status_label", _label("状态"))
 	box.add_child(_panel.get_meta("status_label"))
 
 
@@ -75,9 +75,9 @@ func _refresh() -> void:
 	if sm == null or lbl == null:
 		return
 	var lines: PackedStringArray = [
-		"fp=%d intel=%d stars=%d" % [sm.fp, sm.intel, sm.stars],
-		"intelLv=%d fanLv=%d stationExp=%d" % [sm.intellevel, sm.fanlevel, sm.stationexp],
-		"instances=%d inventory=%s" % [sm.feed_instances.size(), str(sm.inventory)],
+		"饭圈积分=%d  情报点=%d  星星=%d" % [sm.fp, sm.intel, sm.stars],
+		"情报等级=%d  会员等级=%d  站子经验=%d" % [sm.intellevel, sm.fanlevel, sm.stationexp],
+		"放置帖=%d  背包=%s" % [sm.feed_instances.size(), str(sm.inventory)],
 	]
 	lbl.text = "\n".join(lines)
 
@@ -119,14 +119,10 @@ func _act(activityid: String) -> void:
 
 func _collect_all() -> void:
 	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
-	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
-	if expose == null or sm == null:
+	if expose == null:
 		return
-	for item in sm.feed_instances.duplicate():
-		if item is Dictionary:
-			var id: String = str(item.get("instanceid", ""))
-			expose.start_expose(id)
-			expose.collect_instance(id)
+	expose.on_tab_entered(903)
+	expose.on_tab_entered(0)
 	_refresh()
 
 
