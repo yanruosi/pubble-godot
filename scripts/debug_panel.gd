@@ -112,7 +112,24 @@ func _buy_offer(offerid: int) -> void:
 
 func _act(activityid: String) -> void:
 	var act: ActivityManager = get_node_or_null("/root/ActivityManagerSingleton") as ActivityManager
-	if act != null:
+	if act == null:
+		return
+	var row: Dictionary = act.get_activity(activityid)
+	if row.is_empty():
+		return
+	var cat: int = int(row.get("category", 0))
+	if cat == 2 or cat == 3:
+		var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+		var state := sm.get_activity_state(activityid) if sm != null else ""
+		if state == ActivityManager.STATE_DEPARTED:
+			return
+		if state == ActivityManager.STATE_WON:
+			act.depart(activityid)
+		else:
+			var draw_res: Dictionary = act.draw_lottery(activityid)
+			if bool(draw_res.get("ok", false)) and bool(draw_res.get("won", false)):
+				act.depart(activityid)
+	else:
 		act.participate(activityid)
 	_refresh()
 

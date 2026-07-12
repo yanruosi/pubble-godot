@@ -22,6 +22,8 @@ var _countdown_started: bool = false
 var _countdown_elapsed: float = 0.0
 var _pending_intel_level_up: bool = false
 
+var _pending_reveal_by_tab: Dictionary = {}
+
 signal banner_progress_changed(tabtype: int, ratio: float)
 signal lump_granted(tabtype: int, grant_type: int, amount: int)
 signal intel_level_up(new_level: int)
@@ -94,6 +96,54 @@ func add_instance(postid: String, tabsource: int = -1) -> Dictionary:
 	_save_manager.save_progress()
 	instance_changed.emit()
 	return inst
+
+
+func mark_instances_for_reveal(instances: Array) -> void:
+	for item in instances:
+		if not (item is Dictionary):
+			continue
+		var inst: Dictionary = item as Dictionary
+		var iid: String = str(inst.get("instanceid", ""))
+		if iid.is_empty():
+			continue
+		for tabtype in [TAB_FANDOM, TAB_SISTER]:
+			if not _is_visible_on_tab(inst, tabtype):
+				continue
+			if not _pending_reveal_by_tab.has(tabtype):
+				_pending_reveal_by_tab[tabtype] = []
+			var ids: Array = _pending_reveal_by_tab[tabtype]
+			if ids.has(iid):
+				continue
+			ids.append(iid)
+			#region agent log
+			var payload := {
+				"sessionId": "c0d936",
+				"hypothesisId": "G",
+				"location": "expose_manager.gd:mark_instances_for_reveal",
+				"message": "marked reveal",
+				"data": {
+					"instanceid": iid,
+					"tabtype": tabtype,
+					"tabsource": int(inst.get("tabsource", TAB_SISTER)),
+				},
+				"timestamp": Time.get_unix_time_from_system() * 1000,
+				"runId": "reveal-fix",
+			}
+			var lf := FileAccess.open("debug-c0d936.log", FileAccess.READ_WRITE if FileAccess.file_exists("debug-c0d936.log") else FileAccess.WRITE)
+			if lf != null:
+				if FileAccess.file_exists("debug-c0d936.log"):
+					lf.seek_end()
+				lf.store_line(JSON.stringify(payload))
+				lf.close()
+			#endregion
+
+
+func take_pending_reveal_ids(tabtype: int) -> Array:
+	if not _pending_reveal_by_tab.has(tabtype):
+		return []
+	var ids: Array = (_pending_reveal_by_tab[tabtype] as Array).duplicate()
+	_pending_reveal_by_tab.erase(tabtype)
+	return ids
 
 
 func get_instances_for_tab(tabtype: int) -> Array:

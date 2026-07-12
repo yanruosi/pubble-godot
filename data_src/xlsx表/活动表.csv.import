@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://fhi5alwob5uo"
+
+[deps]
+
+files=["res://data_src/xlsx表/活动表.name.translation", "res://data_src/xlsx表/活动表.category.translation", "res://data_src/xlsx表/活动表.conditionid.translation", "res://data_src/xlsx表/活动表.costfp.translation", "res://data_src/xlsx表/活动表.costitemid.translation", "res://data_src/xlsx表/活动表.costitemcount.translation", "res://data_src/xlsx表/活动表.outputposttype1.translation", "res://data_src/xlsx表/活动表.outputposttype2.translation", "res://data_src/xlsx表/活动表.drawcount.translation", "res://data_src/xlsx表/活动表.refreshmarket.translation", "res://data_src/xlsx表/活动表.tutorialonly.translation", "res://data_src/xlsx表/活动表.sort.translation", "res://data_src/xlsx表/活动表.stexplow.translation", "res://data_src/xlsx表/活动表.stexpmid.translation", "res://data_src/xlsx表/活动表.stexphigh.translation", "res://data_src/xlsx表/活动表.opinionlock.translation", "res://data_src/xlsx表/活动表.winrate.translation"]
+
+source_file="res://data_src/xlsx表/活动表.csv"
+dest_files=["res://data_src/xlsx表/活动表.name.translation", "res://data_src/xlsx表/活动表.category.translation", "res://data_src/xlsx表/活动表.conditionid.translation", "res://data_src/xlsx表/活动表.costfp.translation", "res://data_src/xlsx表/活动表.costitemid.translation", "res://data_src/xlsx表/活动表.costitemcount.translation", "res://data_src/xlsx表/活动表.outputposttype1.translation", "res://data_src/xlsx表/活动表.outputposttype2.translation", "res://data_src/xlsx表/活动表.drawcount.translation", "res://data_src/xlsx表/活动表.refreshmarket.translation", "res://data_src/xlsx表/活动表.tutorialonly.translation", "res://data_src/xlsx表/活动表.sort.translation", "res://data_src/xlsx表/活动表.stexplow.translation", "res://data_src/xlsx表/活动表.stexpmid.translation", "res://data_src/xlsx表/活动表.stexphigh.translation", "res://data_src/xlsx表/活动表.opinionlock.translation", "res://data_src/xlsx表/活动表.winrate.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

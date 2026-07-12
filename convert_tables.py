@@ -97,7 +97,7 @@ TABLES = [
         "src": "道具表",
         "out": "items.json",
         "skip_meta_rows": 2,
-        "int_cols": ["itemid", "category", "stacklimit", "tradable"],
+        "int_cols": ["itemid", "category", "stacklimit", "tradable", "winrateboost"],
         "float_cols": [],
     },
     {
@@ -142,6 +142,20 @@ TABLES = [
             "stexpmid",
             "stexphigh",
             "opinionlock",
+            "winrate",
+        ],
+        "float_cols": [],
+    },
+    {
+        "base": "activity_events",
+        "src": "活动结算事件表",
+        "out": "activity_events.json",
+        "skip_meta_rows": 2,
+        "int_cols": [
+            "activityid",
+            "weightlow",
+            "weightmid",
+            "weighthigh",
         ],
         "float_cols": [],
     },
@@ -192,6 +206,7 @@ TABLES = [
         "out": "shop_offers.json",
         "skip_meta_rows": 2,
         "int_cols": [
+            "offerid",
             "currencytype",
             "price",
             "itemid",

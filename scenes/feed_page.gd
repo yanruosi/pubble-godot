@@ -27,6 +27,7 @@ const P3_RECT := Rect2(353, 187, 495, 77)
 const P4_RECT := Rect2(358, 264, 488, 456)
 const P5_RECT := Rect2(855, 49, 217, 671)
 const BACK_BTN_SIZE := Vector2(36, 36)
+const DEBUG_LOG_PATH := "debug-c0d936.log"
 
 var _active_tab: String = TAB_ARTIST
 var _posts_raw: Array = []
@@ -50,6 +51,9 @@ var _fp_label: Label
 var _stars_label: Label
 var _intel_level_label: Label
 var _toast_label: Label
+var _bag_panel: PanelContainer
+var _bag_grid: GridContainer
+var _reveal_run_id: int = 0
 
 func _ready() -> void:
 	_load_json()
@@ -86,7 +90,7 @@ func set_active_tab(tab: String) -> void:
 		_set_tab_visual()
 		_refresh_banner_area()
 		_update_currency_hud()
-		refresh_feed()
+		refresh_feed(true)
 	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 	if tutor != null:
 		tutor.notify_tab_opened(normalized)
@@ -173,6 +177,7 @@ func _build_ui() -> void:
 	_build_p5_hotsearch()
 	_build_p1_tabs()
 	_build_p2_post_area()
+	_build_bag_panel()
 	_build_p3_banner()
 	_build_p4_list()
 
@@ -292,6 +297,61 @@ func _build_p2_post_area() -> void:
 	send.disabled = true
 	send.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(send)
+
+
+func _build_bag_panel() -> void:
+	_bag_panel = PanelContainer.new()
+	_bag_panel.name = "BagPanel"
+	_bag_panel.position = P2_RECT.position
+	_bag_panel.custom_minimum_size = P2_RECT.size
+	_bag_panel.size = P2_RECT.size
+	_bag_panel.visible = false
+	var ps := StyleBoxFlat.new()
+	ps.bg_color = Color(0.98, 0.96, 1, 0.97)
+	ps.corner_radius_top_left = 6
+	ps.corner_radius_top_right = 6
+	ps.corner_radius_bottom_left = 6
+	ps.corner_radius_bottom_right = 6
+	_bag_panel.add_theme_stylebox_override("panel", ps)
+	_content_root.add_child(_bag_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	_bag_panel.add_child(margin)
+
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 6)
+	margin.add_child(root)
+
+	var header := HBoxContainer.new()
+	var title := Label.new()
+	title.text = "背包"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 16)
+	header.add_child(title)
+	var close_btn := Button.new()
+	close_btn.text = "X"
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.pressed.connect(func() -> void:
+		if _bag_panel != null:
+			_bag_panel.visible = false
+	)
+	header.add_child(close_btn)
+	root.add_child(header)
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(P2_RECT.size.x - 16, P2_RECT.size.y - 40)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(scroll)
+
+	_bag_grid = GridContainer.new()
+	_bag_grid.columns = 4
+	_bag_grid.add_theme_constant_override("h_separation", 6)
+	_bag_grid.add_theme_constant_override("v_separation", 6)
+	scroll.add_child(_bag_grid)
 
 
 func _build_p3_banner() -> void:
@@ -420,6 +480,8 @@ func _build_p6_hud() -> void:
 func _update_layout_visibility() -> void:
 	if _post_area != null:
 		_post_area.visible = _active_tab != TAB_MARKET
+	if _bag_panel != null and _active_tab != TAB_MARKET:
+		_bag_panel.visible = false
 	_refresh_banner_area()
 
 
@@ -515,7 +577,47 @@ func _play_intel_level_flash() -> void:
 
 
 func _on_market_bag_pressed() -> void:
-	_show_toast("背包功能 M3 开放")
+	if _bag_panel == null:
+		return
+	_refresh_bag_panel()
+	_bag_panel.visible = not _bag_panel.visible
+
+
+func _refresh_bag_panel() -> void:
+	if _bag_grid == null:
+		return
+	for c in _bag_grid.get_children():
+		c.queue_free()
+	var inv: InventoryManager = get_node_or_null("/root/InventoryManagerSingleton") as InventoryManager
+	if inv == null:
+		return
+	var entries: Array = inv.get_display_entries()
+	if entries.is_empty():
+		var tip := Label.new()
+		tip.text = "背包为空"
+		tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
+		_bag_grid.add_child(tip)
+		return
+	for entry in entries:
+		if not (entry is Dictionary):
+			continue
+		var cell := PanelContainer.new()
+		cell.custom_minimum_size = Vector2(88, 52)
+		var cs := StyleBoxFlat.new()
+		cs.bg_color = Color(0.92, 0.9, 0.98, 1)
+		cs.corner_radius_top_left = 4
+		cs.corner_radius_top_right = 4
+		cs.corner_radius_bottom_left = 4
+		cs.corner_radius_bottom_right = 4
+		cell.add_theme_stylebox_override("panel", cs)
+		var lbl := Label.new()
+		lbl.text = "%s\n×%d" % [str(entry.get("name", "")), int(entry.get("count", 0))]
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lbl.add_theme_font_size_override("font_size", 11)
+		cell.add_child(lbl)
+		_bag_grid.add_child(cell)
 
 
 func _show_toast(msg: String) -> void:
@@ -542,11 +644,13 @@ func _set_tab_visual() -> void:
 		btn.add_theme_color_override("font_color", active_color if on else inactive_color)
 
 
-func refresh_feed() -> void:
+func refresh_feed(play_reveal: bool = false) -> void:
 	_load_json()
 	_update_currency_hud()
 	if _list_box == null:
 		return
+	_reveal_run_id += 1
+	var run_id := _reveal_run_id
 	for c in _list_box.get_children():
 		c.queue_free()
 
@@ -554,12 +658,36 @@ func refresh_feed() -> void:
 		TAB_ARTIST:
 			_refresh_artist_tab()
 		TAB_FANDOM, TAB_SISTER:
-			_refresh_instance_tab(_exposure_tabtype_for_name(_active_tab))
+			var tabtype: int = _exposure_tabtype_for_name(_active_tab)
+			_refresh_instance_tab(tabtype)
+			if play_reveal:
+				call_deferred("_play_pending_reveals", tabtype, run_id)
 		TAB_ACCOUNT, TAB_MARKET:
 			var tip := Label.new()
 			tip.text = "敬请期待"
 			tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
 			_list_box.add_child(tip)
+
+
+func _dbg_feed_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
+	#region agent log
+	var payload := {
+		"sessionId": "c0d936",
+		"hypothesisId": hypothesis_id,
+		"location": location,
+		"message": message,
+		"data": data,
+		"timestamp": Time.get_unix_time_from_system() * 1000,
+		"runId": "reveal-fix",
+	}
+	var f := FileAccess.open(DEBUG_LOG_PATH, FileAccess.READ_WRITE if FileAccess.file_exists(DEBUG_LOG_PATH) else FileAccess.WRITE)
+	if f == null:
+		return
+	if FileAccess.file_exists(DEBUG_LOG_PATH):
+		f.seek_end()
+	f.store_line(JSON.stringify(payload))
+	f.close()
+	#endregion
 
 
 func _refresh_artist_tab() -> void:
@@ -623,48 +751,139 @@ func _refresh_instance_tab(tabtype: int) -> void:
 			continue
 		var inst_dict: Dictionary = inst as Dictionary
 		var tpl: Dictionary = expose.get_template(str(inst_dict.get("postid", "")))
-		var row := PanelContainer.new()
-		row.custom_minimum_size = Vector2(P4_RECT.size.x, 64)
-		var style := StyleBoxFlat.new()
-		style.bg_color = Color(1, 1, 1, 0.88)
-		style.corner_radius_top_left = 4
-		style.corner_radius_top_right = 4
-		style.corner_radius_bottom_left = 4
-		style.corner_radius_bottom_right = 4
-		row.add_theme_stylebox_override("panel", style)
-
-		var margin := MarginContainer.new()
-		margin.add_theme_constant_override("margin_left", 10)
-		margin.add_theme_constant_override("margin_top", 8)
-		margin.add_theme_constant_override("margin_right", 10)
-		margin.add_theme_constant_override("margin_bottom", 8)
-		row.add_child(margin)
-
-		var vbox := VBoxContainer.new()
-		vbox.add_theme_constant_override("separation", 4)
-		margin.add_child(vbox)
-
-		var title := Label.new()
-		title.text = str(tpl.get("title", inst_dict.get("postid", "")))
-		vbox.add_child(title)
-
-		var reward := Label.new()
-		var collected: bool = bool(inst_dict.get("fpcollected" if fp_side else "intelcollected", false))
-		var amount: int = int(tpl.get("grantfp" if fp_side else "grantintel", 0))
-		if collected or amount <= 0:
-			reward.text = "已收取"
-			reward.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55, 1))
-			style.bg_color = Color(0.92, 0.92, 0.94, 0.88)
-		else:
-			var unit := "饭圈积分" if fp_side else "情报点"
-			reward.text = "+%d %s" % [amount, unit]
-		vbox.add_child(reward)
-		_list_box.add_child(row)
+		var card: Node = CARD_SCENE.instantiate()
+		if card is Control:
+			(card as Control).custom_minimum_size.x = P4_RECT.size.x
+		_list_box.add_child(card)
+		if card.has_method("setup"):
+			card.call("setup", _instance_card_view_dict(inst_dict, tpl, fp_side))
+		if card is Node:
+			(card as Node).set_meta("instance_id", str(inst_dict.get("instanceid", "")))
 
 	if _list_box.get_child_count() == 0:
 		var tip := Label.new()
 		tip.text = "暂无放置帖子"
+		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tip.add_theme_color_override("font_color", Color(0.45, 0.42, 0.52, 1))
 		_list_box.add_child(tip)
+
+
+func _instance_card_view_dict(inst: Dictionary, tpl: Dictionary, fp_side: bool) -> Dictionary:
+	var collected: bool = bool(inst.get("fpcollected" if fp_side else "intelcollected", false))
+	var amount: int = int(tpl.get("grantfp" if fp_side else "grantintel", 0))
+	var time_display := ""
+	if collected or amount <= 0:
+		time_display = "已收取"
+	else:
+		var unit := "饭圈积分" if fp_side else "情报点"
+		time_display = "+%d %s" % [amount, unit]
+	return {
+		"layout": "fans",
+		"artist_name": str(tpl.get("title", inst.get("postid", ""))),
+		"time_display": time_display,
+		"text": str(tpl.get("text", "")),
+		"image_path": str(tpl.get("imagepath", "")),
+		"avatar_path": str(tpl.get("avatarpath", "")),
+		"is_pinned": false,
+	}
+
+
+func _play_pending_reveals(tabtype: int, run_id: int = -1) -> void:
+	if run_id >= 0 and run_id != _reveal_run_id:
+		#region agent log
+		_dbg_feed_log("F", "feed_page.gd:_play_pending_reveals", "stale reveal skipped", {
+			"tabtype": tabtype,
+			"run_id": run_id,
+			"current_run_id": _reveal_run_id,
+		})
+		#endregion
+		return
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose == null or _list_box == null:
+		return
+	var ids: Array = expose.take_pending_reveal_ids(tabtype)
+	#region agent log
+	_dbg_feed_log("A", "feed_page.gd:_play_pending_reveals", "reveal start", {
+		"tabtype": tabtype,
+		"pending_ids": ids,
+		"child_count": _list_box.get_child_count(),
+		"run_id": run_id,
+	})
+	#endregion
+	if ids.is_empty():
+		return
+	if _scroll != null:
+		_scroll.scroll_vertical = 0
+	await get_tree().process_frame
+	if run_id >= 0 and run_id != _reveal_run_id:
+		#region agent log
+		_dbg_feed_log("F", "feed_page.gd:_play_pending_reveals", "stale after layout frame", {
+			"tabtype": tabtype,
+			"run_id": run_id,
+			"current_run_id": _reveal_run_id,
+		})
+		#endregion
+		return
+	var pending: Dictionary = {}
+	for iid in ids:
+		pending[str(iid)] = true
+	var targets: Array[Control] = []
+	for child in _list_box.get_children():
+		if not (child is Control):
+			continue
+		if not is_instance_valid(child):
+			continue
+		var iid: String = str((child as Node).get_meta("instance_id", ""))
+		if iid.is_empty() or not pending.has(iid):
+			continue
+		targets.append(child as Control)
+	var order := 0
+	for card in targets:
+		var slide_h: float = _reveal_slide_height(card)
+		var wrapper := _wrap_card_for_reveal_slide(card, slide_h)
+		card.position = Vector2(0.0, -slide_h)
+		var tw := create_tween()
+		tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(float(order) * 0.32)
+		tw.tween_property(card, "position:y", 0.0, 0.36)
+		order += 1
+	#region agent log
+	_dbg_feed_log("B", "feed_page.gd:_play_pending_reveals", "reveal scheduled", {
+		"tabtype": tabtype,
+		"animated_count": order,
+		"run_id": run_id,
+	})
+	#endregion
+
+
+func _reveal_slide_height(card: Control) -> float:
+	var h: float = card.size.y
+	if h <= 0.0:
+		h = card.get_combined_minimum_size().y
+	if h <= 0.0:
+		h = card.custom_minimum_size.y
+	return maxf(h, 1.0)
+
+
+func _wrap_card_for_reveal_slide(card: Control, slide_h: float) -> Control:
+	card.scale = Vector2.ONE
+	card.modulate = Color.WHITE
+	card.pivot_offset = Vector2.ZERO
+	var parent := card.get_parent()
+	if parent == null:
+		return card
+	var idx := card.get_index()
+	var wrapper := Control.new()
+	wrapper.clip_contents = true
+	wrapper.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wrapper.custom_minimum_size = Vector2(card.custom_minimum_size.x, slide_h)
+	parent.remove_child(card)
+	parent.add_child(wrapper)
+	parent.move_child(wrapper, idx)
+	wrapper.add_child(card)
+	card.position = Vector2.ZERO
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return wrapper
 
 
 func _on_banner_progress(tabtype: int, ratio: float) -> void:

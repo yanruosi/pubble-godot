@@ -37,6 +37,7 @@ var pending_post_level_nav: Dictionary = {}
 
 var feed_seen: Dictionary = {}
 var feed_pinned_post_id: String = ""
+var activity_state: Dictionary = {}
 
 ## 标题页 → 主界面接力；瞬态，不写盘。"home" / "continue" / ""
 var boot_target: String = ""
@@ -89,6 +90,7 @@ func load_progress() -> void:
 	_instance_id_counter = int(config.get_value("instances", "id_counter", 0))
 	feed_seen = _as_dict(config.get_value("feed", "seen", {}))
 	feed_pinned_post_id = str(config.get_value("feed", "pinned_post_id", ""))
+	activity_state = _as_dict(config.get_value("activity", "state", {}))
 
 
 func normalize_feed_instances(raw: Array) -> Array:
@@ -133,6 +135,7 @@ func _apply_defaults_after_fresh_save() -> void:
 	feed_instances = []
 	banner_last_offline_ts = int(Time.get_unix_time_from_system())
 	_instance_id_counter = 0
+	activity_state = {}
 
 
 func _as_dict(v: Variant) -> Dictionary:
@@ -169,6 +172,7 @@ func reset_progress() -> void:
 	level_hotspot_clicked.clear()
 	feed_seen.clear()
 	feed_pinned_post_id = ""
+	activity_state = {}
 	recent_opened_chapter_id = 0
 	recent_opened_level_id = ""
 	pending_post_level_nav.clear()
@@ -237,6 +241,7 @@ func save_progress() -> void:
 	config.set_value("banner", "last_offline_ts", banner_last_offline_ts)
 	config.set_value("feed", "seen", feed_seen)
 	config.set_value("feed", "pinned_post_id", feed_pinned_post_id)
+	config.set_value("activity", "state", activity_state)
 	var err := config.save(SAVE_PATH)
 	if err != OK:
 		push_warning("Save progress failed: %d" % err)
@@ -486,3 +491,16 @@ func mark_hotspot_used(level_id: String, hotspot_id: String) -> void:
 		used.append(hotspot_id)
 	current["hotspot_used"] = used
 	level_progress[level_id] = current
+
+
+func get_activity_state(activityid: String) -> String:
+	if activityid.is_empty():
+		return ""
+	return str(activity_state.get(activityid, ""))
+
+
+func set_activity_state(activityid: String, state: String) -> void:
+	if activityid.is_empty() or state.is_empty():
+		return
+	activity_state[activityid] = state
+	save_progress()

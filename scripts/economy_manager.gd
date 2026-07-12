@@ -121,6 +121,9 @@ func try_upgrade_fan() -> bool:
 	_consume_inventory_by_category(need_cat, need_count)
 	_save_manager.fanlevel = next_level
 	_save_manager.save_progress()
+	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
+	if tutor != null:
+		tutor.notify_fan_upgraded()
 	return true
 
 

@@ -3,12 +3,12 @@
     "activityid": "1",
     "name": "机场1",
     "category": 1,
-    "conditionid": 4,
+    "conditionid": 0,
     "costfp": 0,
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 101,
-    "outputposttype2": 0,
+    "outputposttype2": 401,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -16,18 +16,19 @@
     "stexplow": 5,
     "stexpmid": 10,
     "stexphigh": 15,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 0
   },
   {
     "activityid": "2",
     "name": "机场2",
     "category": 1,
-    "conditionid": 4,
+    "conditionid": 0,
     "costfp": 20,
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 102,
-    "outputposttype2": 0,
+    "outputposttype2": 401,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -35,18 +36,19 @@
     "stexplow": 5,
     "stexpmid": 10,
     "stexphigh": 15,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 0
   },
   {
     "activityid": "3",
     "name": "机场3",
     "category": 1,
-    "conditionid": 5,
+    "conditionid": 0,
     "costfp": 0,
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 103,
-    "outputposttype2": 0,
+    "outputposttype2": 401,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -54,7 +56,8 @@
     "stexplow": 8,
     "stexpmid": 15,
     "stexphigh": 22,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 0
   },
   {
     "activityid": "4",
@@ -65,7 +68,7 @@
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 201,
-    "outputposttype2": 0,
+    "outputposttype2": 402,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -73,7 +76,8 @@
     "stexplow": 10,
     "stexpmid": 18,
     "stexphigh": 25,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 50
   },
   {
     "activityid": "5",
@@ -84,7 +88,7 @@
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 202,
-    "outputposttype2": 0,
+    "outputposttype2": 402,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -92,7 +96,8 @@
     "stexplow": 10,
     "stexpmid": 18,
     "stexphigh": 25,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 40
   },
   {
     "activityid": "6",
@@ -103,7 +108,7 @@
     "costitemid": 0,
     "costitemcount": 0,
     "outputposttype1": 203,
-    "outputposttype2": 0,
+    "outputposttype2": 402,
     "drawcount": 1,
     "refreshmarket": 0,
     "tutorialonly": 0,
@@ -111,6 +116,27 @@
     "stexplow": 15,
     "stexpmid": 25,
     "stexphigh": 35,
-    "opinionlock": 1
+    "opinionlock": 1,
+    "winrate": 35
+  },
+  {
+    "activityid": "7",
+    "name": "教程签售",
+    "category": 3,
+    "conditionid": 5,
+    "costfp": 0,
+    "costitemid": 0,
+    "costitemcount": 0,
+    "outputposttype1": 301,
+    "outputposttype2": 0,
+    "drawcount": 1,
+    "refreshmarket": 0,
+    "tutorialonly": 1,
+    "sort": 7,
+    "stexplow": 10,
+    "stexpmid": 18,
+    "stexphigh": 25,
+    "opinionlock": 0,
+    "winrate": 100
   }
 ]

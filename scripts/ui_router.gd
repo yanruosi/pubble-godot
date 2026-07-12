@@ -14,10 +14,13 @@ enum PageId {
 @onready var btn_artist_feed: Button = $SafeArea/RootVBox/ContentStack/HomePage/BtnArtistFeed
 @onready var home_margin: MarginContainer = $SafeArea/RootVBox/ContentStack/HomePage/HomeMargin
 
+const HOME_OVERLAYS := preload("res://scripts/home_overlays.gd")
+
 var current_page: Control = null
 var chapter_manager: ChapterManager
 var save_manager: SaveManager
 var condition_checker: ConditionChecker
+var _home_overlays: CanvasLayer
 
 
 func _ready() -> void:
@@ -26,8 +29,15 @@ func _ready() -> void:
 	_connect_home_entry()
 	_connect_feed_signals()
 	_connect_level_select_signals()
+	_setup_home_overlays()
 	_ensure_initial_page_state()
 	_apply_boot_entry()
+
+
+func _setup_home_overlays() -> void:
+	_home_overlays = HOME_OVERLAYS.new()
+	add_child(_home_overlays)
+	_home_overlays.setup(home_page)
 
 
 func _apply_chrome_hidden() -> void:
@@ -94,8 +104,29 @@ func _on_artist_feed_pressed() -> void:
 
 
 func open_feed_artist_tab() -> void:
+	open_feed_tab("artist")
+
+
+func open_feed_tab(tab: String = "artist") -> void:
+	#region agent log
+	var payload := {
+		"sessionId": "c0d936",
+		"hypothesisId": "C",
+		"location": "ui_router.gd:open_feed_tab",
+		"message": "open feed tab",
+		"data": {"tab": tab},
+		"timestamp": Time.get_unix_time_from_system() * 1000,
+		"runId": "reveal-fix",
+	}
+	var lf := FileAccess.open("debug-c0d936.log", FileAccess.READ_WRITE if FileAccess.file_exists("debug-c0d936.log") else FileAccess.WRITE)
+	if lf != null:
+		if FileAccess.file_exists("debug-c0d936.log"):
+			lf.seek_end()
+		lf.store_line(JSON.stringify(payload))
+		lf.close()
+	#endregion
 	if feed_page != null and feed_page.has_method("set_active_tab"):
-		feed_page.call("set_active_tab", "artist")
+		feed_page.call("set_active_tab", tab)
 	show_page(PageId.FEED)
 
 
@@ -110,8 +141,6 @@ func show_page(page_id: PageId) -> void:
 
 	target.visible = true
 	current_page = target
-	if page_id == PageId.FEED and feed_page.has_method("refresh_feed"):
-		feed_page.call_deferred("refresh_feed")
 	top_bar.visible = false
 	bottom_nav.visible = false
 
