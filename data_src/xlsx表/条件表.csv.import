@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dao4inu62tbew"
+
+[deps]
+
+files=["res://data_src/xlsx表/条件表.type.translation", "res://data_src/xlsx表/条件表.param.translation", "res://data_src/xlsx表/条件表.txt.translation"]
+
+source_file="res://data_src/xlsx表/条件表.csv"
+dest_files=["res://data_src/xlsx表/条件表.type.translation", "res://data_src/xlsx表/条件表.param.translation", "res://data_src/xlsx表/条件表.txt.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

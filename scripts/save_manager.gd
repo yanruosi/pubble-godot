@@ -2,7 +2,7 @@ extends Node
 class_name SaveManager
 
 const SAVE_PATH := "user://progress.cfg"
-const SAVE_VERSION := 3
+const SAVE_VERSION := 5
 
 const CAT_FP := 22
 const CAT_STARS := 23
@@ -30,7 +30,18 @@ var tutorialdone: bool = false
 var inventory: Dictionary = {}
 var feed_instances: Array = []
 var banner_last_offline_ts: int = 0
+var keypost_progress: int = 0
+var keypost_pity: Dictionary = {}
 var _instance_id_counter: int = 0
+
+var opening_done: bool = false
+var post_counts: Dictionary = {}
+var mypost_queue: Array = []
+var favorites: Array = []
+var fans: int = 0
+var hotcount: int = 0
+var activity_first_clear: Dictionary = {}
+var feed_pending: Array = []
 
 ## 关卡结算后 change_scene 回主界面时消费；不写盘。
 var pending_post_level_nav: Dictionary = {}
@@ -87,10 +98,21 @@ func load_progress() -> void:
 	inventory = _as_dict(config.get_value("inventory", "items", {}))
 	feed_instances = _normalize_feed_instances(_as_array(config.get_value("instances", "feed", [])))
 	banner_last_offline_ts = int(config.get_value("banner", "last_offline_ts", 0))
+	keypost_progress = int(config.get_value("player", "keypost_progress", 0))
+	keypost_pity = _as_dict(config.get_value("player", "keypost_pity", {}))
 	_instance_id_counter = int(config.get_value("instances", "id_counter", 0))
 	feed_seen = _as_dict(config.get_value("feed", "seen", {}))
 	feed_pinned_post_id = str(config.get_value("feed", "pinned_post_id", ""))
 	activity_state = _as_dict(config.get_value("activity", "state", {}))
+
+	opening_done = bool(config.get_value("player", "opening_done", false))
+	post_counts = _as_dict(config.get_value("player", "post_counts", {}))
+	mypost_queue = _normalize_mypost_queue(_as_array(config.get_value("player", "mypost_queue", [])))
+	favorites = _as_string_array(config.get_value("player", "favorites", []))
+	fans = int(config.get_value("player", "fans", 0))
+	hotcount = int(config.get_value("player", "hotcount", 0))
+	activity_first_clear = _as_dict(config.get_value("player", "activity_first_clear", {}))
+	feed_pending = _normalize_feed_pending(_as_array(config.get_value("player", "feed_pending", [])))
 
 
 func normalize_feed_instances(raw: Array) -> Array:
@@ -105,7 +127,8 @@ func _normalize_feed_instances(raw: Array) -> Array:
 		var inst: Dictionary = (item as Dictionary).duplicate(true)
 		if inst.has("tabsource"):
 			inst["fpcollected"] = bool(inst.get("fpcollected", false))
-			inst["intelcollected"] = bool(inst.get("intelcollected", false))
+			inst["keypostcollected"] = bool(inst.get("keypostcollected", inst.get("intelcollected", false)))
+			inst["fpearned"] = int(inst.get("fpearned", 0))
 			out.append(inst)
 			continue
 		var postid: String = str(inst.get("postid", ""))
@@ -116,9 +139,74 @@ func _normalize_feed_instances(raw: Array) -> Array:
 			"tabsource": tabsource,
 			"createdat": int(inst.get("createdat", int(Time.get_unix_time_from_system()))),
 			"fpcollected": bool(inst.get("fpcollected", false)),
-			"intelcollected": bool(inst.get("intelcollected", false)),
+			"keypostcollected": bool(inst.get("keypostcollected", inst.get("intelcollected", false))),
+			"fpearned": int(inst.get("fpearned", 0)),
 		}
 		out.append(normalized)
+	return out
+
+
+func _normalize_mypost_queue(raw: Array) -> Array:
+	var out: Array = []
+	for item in raw:
+		if not (item is Dictionary):
+			continue
+		var q: Dictionary = (item as Dictionary).duplicate(true)
+		out.append({
+			"queue_id": str(q.get("queue_id", "")),
+			"mypostid": str(q.get("mypostid", "")),
+			"state": str(q.get("state", "exposing")),
+			"heat": int(q.get("heat", 0)),
+			"hotresult": int(q.get("hotresult", -1)),
+			"expose_start_ts": int(q.get("expose_start_ts", 0)),
+			"expose_end_ts": int(q.get("expose_end_ts", 0)),
+			"idle_fp_earned": int(q.get("idle_fp_earned", 0)),
+			"idle_fans_earned": int(q.get("idle_fans_earned", 0)),
+			"idle_next_ts": int(q.get("idle_next_ts", 0)),
+			"title": str(q.get("title", "")),
+			"is_pinned": bool(q.get("is_pinned", false)),
+		})
+	return out
+
+
+func _normalize_feed_pending(raw: Array) -> Array:
+	## release_ts<=0 且未武装：冷却未开始（等首次进饭圈）
+	## 旧档若只有 release_ts（结算起算）→ 改回未武装，保留剩余秒数作 delay
+	var out: Array = []
+	var now: int = int(Time.get_unix_time_from_system())
+	for item in raw:
+		if not (item is Dictionary):
+			continue
+		var p: Dictionary = item as Dictionary
+		var delay_sec: int = int(p.get("delay_sec", 0))
+		var release_ts: int = int(p.get("release_ts", 0))
+		var cd_armed: bool = bool(p.get("cd_armed", false))
+		if not p.has("cd_armed") and not p.has("delay_sec") and release_ts > 0:
+			delay_sec = maxi(release_ts - now, 1)
+			release_ts = 0
+			cd_armed = false
+		elif p.has("cd_armed"):
+			cd_armed = bool(p.get("cd_armed", false))
+		elif release_ts > 0:
+			cd_armed = true
+		if delay_sec <= 0 and not cd_armed:
+			delay_sec = 2
+		out.append({
+			"postid": str(p.get("postid", "")),
+			"tabsource": int(p.get("tabsource", 903)),
+			"delay_sec": delay_sec,
+			"release_ts": release_ts if cd_armed else 0,
+			"cd_armed": cd_armed,
+		})
+	return out
+
+
+func _as_string_array(v: Variant) -> Array:
+	if not (v is Array):
+		return []
+	var out: Array = []
+	for item in v:
+		out.append(str(item))
 	return out
 
 
@@ -130,12 +218,22 @@ func _apply_defaults_after_fresh_save() -> void:
 	fanlevel = 0
 	stationexp = 0
 	tutorialstep = 0
-	tutorialdone = false
+	tutorialdone = true
 	inventory = {}
 	feed_instances = []
 	banner_last_offline_ts = int(Time.get_unix_time_from_system())
+	keypost_progress = 0
+	keypost_pity = {}
 	_instance_id_counter = 0
 	activity_state = {}
+	opening_done = false
+	post_counts = {}
+	mypost_queue = []
+	favorites = []
+	fans = 0
+	hotcount = 0
+	activity_first_clear = {}
+	feed_pending = []
 
 
 func _as_dict(v: Variant) -> Dictionary:
@@ -226,6 +324,16 @@ func save_progress() -> void:
 	config.set_value("player", "stationexp", stationexp)
 	config.set_value("player", "tutorialstep", tutorialstep)
 	config.set_value("player", "tutorialdone", tutorialdone)
+	config.set_value("player", "keypost_progress", keypost_progress)
+	config.set_value("player", "keypost_pity", keypost_pity)
+	config.set_value("player", "opening_done", opening_done)
+	config.set_value("player", "post_counts", post_counts)
+	config.set_value("player", "mypost_queue", mypost_queue)
+	config.set_value("player", "favorites", favorites)
+	config.set_value("player", "fans", fans)
+	config.set_value("player", "hotcount", hotcount)
+	config.set_value("player", "activity_first_clear", activity_first_clear)
+	config.set_value("player", "feed_pending", feed_pending)
 	config.set_value("player", "recent_opened_chapter_id", recent_opened_chapter_id)
 	config.set_value("player", "recent_opened_level_id", recent_opened_level_id)
 	config.set_value("chapter", "completed", chapter_completed)
@@ -315,6 +423,40 @@ func remove_inventory_item(itemid: int, count: int = 1) -> bool:
 func next_instance_id() -> String:
 	_instance_id_counter += 1
 	return "inst_%d" % _instance_id_counter
+
+
+func next_queue_id() -> String:
+	_instance_id_counter += 1
+	return "q_%d" % _instance_id_counter
+
+
+func is_activity_first_cleared(activityid: String) -> bool:
+	return bool(activity_first_clear.get(activityid, false))
+
+
+func mark_activity_first_cleared(activityid: String) -> void:
+	if activityid.is_empty():
+		return
+	activity_first_clear[activityid] = true
+
+
+func get_post_count(tagid: String) -> int:
+	return int(post_counts.get(tagid, 0))
+
+
+func add_post_count(tagid: String, count: int) -> void:
+	if tagid.is_empty() or count == 0:
+		return
+	post_counts[tagid] = maxi(get_post_count(tagid) + count, 0)
+
+
+func consume_post_count(tagid: String, count: int = 1) -> bool:
+	if tagid.is_empty() or count <= 0:
+		return false
+	if get_post_count(tagid) < count:
+		return false
+	post_counts[tagid] = get_post_count(tagid) - count
+	return true
 
 
 func is_chapter_completed(chapter_id: int) -> bool:

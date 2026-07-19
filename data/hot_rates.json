@@ -1,0 +1,22 @@
+[
+  {
+    "heatmin": 0,
+    "heatmax": 14,
+    "bonusrate": 0
+  },
+  {
+    "heatmin": 15,
+    "heatmax": 29,
+    "bonusrate": 20
+  },
+  {
+    "heatmin": 30,
+    "heatmax": 49,
+    "bonusrate": 40
+  },
+  {
+    "heatmin": 50,
+    "heatmax": 999,
+    "bonusrate": 60
+  }
+]

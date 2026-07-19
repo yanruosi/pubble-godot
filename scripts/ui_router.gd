@@ -21,9 +21,11 @@ var chapter_manager: ChapterManager
 var save_manager: SaveManager
 var condition_checker: ConditionChecker
 var _home_overlays: CanvasLayer
+var pending_first_post: bool = false
 
 
 func _ready() -> void:
+	add_to_group("ui_router")
 	_init_managers()
 	_apply_chrome_hidden()
 	_connect_home_entry()
@@ -89,6 +91,8 @@ func _connect_feed_signals() -> void:
 
 
 func _on_feed_back_requested() -> void:
+	if pending_first_post:
+		return
 	show_page(PageId.HOME)
 
 
@@ -107,27 +111,30 @@ func open_feed_artist_tab() -> void:
 	open_feed_tab("artist")
 
 
+func open_feed_account_tab() -> void:
+	open_feed_tab("account")
+
+
 func open_feed_tab(tab: String = "artist") -> void:
-	#region agent log
-	var payload := {
-		"sessionId": "c0d936",
-		"hypothesisId": "C",
-		"location": "ui_router.gd:open_feed_tab",
-		"message": "open feed tab",
-		"data": {"tab": tab},
-		"timestamp": Time.get_unix_time_from_system() * 1000,
-		"runId": "reveal-fix",
-	}
-	var lf := FileAccess.open("debug-c0d936.log", FileAccess.READ_WRITE if FileAccess.file_exists("debug-c0d936.log") else FileAccess.WRITE)
-	if lf != null:
-		if FileAccess.file_exists("debug-c0d936.log"):
-			lf.seek_end()
-		lf.store_line(JSON.stringify(payload))
-		lf.close()
-	#endregion
+	if pending_first_post and tab != "account":
+		tab = "account"
 	if feed_page != null and feed_page.has_method("set_active_tab"):
 		feed_page.call("set_active_tab", tab)
+	if feed_page != null and feed_page.has_method("apply_opening_post_lock"):
+		feed_page.call("apply_opening_post_lock", pending_first_post)
 	show_page(PageId.FEED)
+
+
+func set_pending_first_post(value: bool) -> void:
+	pending_first_post = value
+	if feed_page != null and feed_page.has_method("apply_opening_post_lock"):
+		feed_page.call("apply_opening_post_lock", value)
+
+
+func clear_pending_first_post() -> void:
+	pending_first_post = false
+	if feed_page != null and feed_page.has_method("apply_opening_post_lock"):
+		feed_page.call("apply_opening_post_lock", false)
 
 
 func show_page(page_id: PageId) -> void:
@@ -143,6 +150,8 @@ func show_page(page_id: PageId) -> void:
 	current_page = target
 	top_bar.visible = false
 	bottom_nav.visible = false
+	if page_id == PageId.HOME and _home_overlays != null and _home_overlays.has_method("on_home_entered"):
+		_home_overlays.call("on_home_entered")
 
 
 func _get_page_by_id(page_id: PageId) -> Control:
@@ -165,6 +174,9 @@ func _apply_boot_entry() -> void:
 	if target == "continue":
 		if save_manager != null:
 			save_manager.load_progress()
+		show_page(PageId.HOME)
+		return
+	if save_manager != null and save_manager.get("opening_done") != null and not bool(save_manager.opening_done):
 		show_page(PageId.HOME)
 		return
 	if not _apply_pending_post_level_nav():

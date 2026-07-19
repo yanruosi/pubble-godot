@@ -4,6 +4,7 @@ class_name IdolLevelRoot
 @export var level_id: String = ""
 
 const MAIN_UI_PATH := "res://scenes/main_ui.tscn"
+const LEVEL_CLEAR_POSTS_PATH := "res://data/level_clear_posts.json"
 
 @onready var bg_solid: ColorRect = $BgSolid
 @onready var scene_pan: ScenePanController = $SceneViewport
@@ -32,6 +33,14 @@ var _truth_text_label: Label
 var _truth_reward_label: Label
 var _truth_dismiss_btn: Button
 var _truth_is_review_mode := false
+var _truth_prompt_label: Label
+var _truth_option1_btn: Button
+var _truth_option2_btn: Button
+var _truth_preview_label: Label
+var _truth_goto_btn: Button
+var _truth_options_box: VBoxContainer
+var _selected_main_postid: String = ""
+var _level_clear_posts: Array = []
 var _menu_layer: CanvasLayer
 var _force_fresh_restart := false
 var _is_replay_session := false
@@ -537,6 +546,9 @@ func _apply_completion() -> void:
 	_save_manager.set_level_progress(level_id, _build_level_progress_patch())
 	if _first_clear_this_finish:
 		_grant_level_rewards()
+		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+		if expose != null:
+			expose.add_heat("clear")
 		var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 		if tutor != null:
 			tutor.notify_level_cleared()
@@ -553,13 +565,17 @@ func _grant_level_rewards() -> void:
 		return
 	var gs: int = int(row.get("grantstars", 0))
 	var gf: int = int(row.get("grantfp", 0))
-	var gi: int = int(row.get("grantintel", 0))
 	if gs > 0:
 		economy.add_currency(23, gs, "level_clear")
 	if gf > 0:
 		economy.add_currency(22, gf, "level_clear")
-	if gi > 0:
-		economy.add_currency(24, gi, "level_clear")
+	var grant_postid: String = str(row.get("grantpostid", ""))
+	var grant_postcount: int = int(row.get("grantpostcount", 0))
+	if not grant_postid.is_empty() and grant_postcount > 0:
+		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+		if expose != null:
+			for _i in range(grant_postcount):
+				expose.add_instance(grant_postid)
 
 func _mark_chapter_completed_if_all_done() -> void:
 	if _save_manager == null or _chapter_manager == null:
@@ -581,18 +597,65 @@ func _mark_chapter_completed_if_all_done() -> void:
 func _show_truth_overlay(review_mode: bool = false) -> void:
 	_ensure_truth_overlay()
 	_truth_is_review_mode = review_mode
-	if _truth_dismiss_btn != null:
-		_truth_dismiss_btn.text = "关闭" if review_mode else "返回艺人动态"
+	_selected_main_postid = ""
+	_load_level_clear_posts()
+	var clear_row: Dictionary = _get_level_clear_row(level_id)
+	var use_options := _first_clear_this_finish and not review_mode and not clear_row.is_empty()
+
 	_truth_text_label.text = str(_level_config.get("truth_text", "真相尚未配置。"))
 	if _first_clear_this_finish and _chapter_manager != null:
 		var row: Dictionary = _chapter_manager.get_level_by_id(level_id)
 		var gs: int = int(row.get("grantstars", 0))
 		var gf: int = int(row.get("grantfp", 0))
-		var gi: int = int(row.get("grantintel", 0))
-		_truth_reward_label.text = "获得：★%d 积分%d 情报%d" % [gs, gf, gi]
+		_truth_reward_label.text = "获得：★%d 积分%d" % [gs, gf]
 	else:
 		_truth_reward_label.text = "关卡完成"
+
+	if _truth_options_box != null:
+		_truth_options_box.visible = use_options
+	if _truth_preview_label != null:
+		_truth_preview_label.visible = false
+		_truth_preview_label.text = ""
+	if _truth_goto_btn != null:
+		_truth_goto_btn.visible = false
+	if _truth_dismiss_btn != null:
+		_truth_dismiss_btn.visible = not use_options
+		_truth_dismiss_btn.text = "关闭" if review_mode else "返回艺人动态"
+
+	if use_options:
+		if _truth_prompt_label != null:
+			var ptitle: String = str(clear_row.get("prompttitle", "选择发帖"))
+			var ptext: String = str(clear_row.get("prompttext", ""))
+			_truth_prompt_label.text = "%s\n%s" % [ptitle, ptext]
+		if _truth_option1_btn != null:
+			_truth_option1_btn.text = str(clear_row.get("option1text", "选项1"))
+			_truth_option1_btn.visible = not str(clear_row.get("option1text", "")).is_empty()
+		if _truth_option2_btn != null:
+			var o2: String = str(clear_row.get("option2text", ""))
+			_truth_option2_btn.text = o2
+			_truth_option2_btn.visible = not o2.is_empty()
+		if _truth_goto_btn != null:
+			var gtxt: String = str(clear_row.get("gotobtntext", ""))
+			_truth_goto_btn.text = gtxt if not gtxt.is_empty() else "前往pubble"
 	_truth_layer.visible = true
+
+
+func _load_level_clear_posts() -> void:
+	if not _level_clear_posts.is_empty():
+		return
+	if not FileAccess.file_exists(LEVEL_CLEAR_POSTS_PATH):
+		_level_clear_posts = []
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(LEVEL_CLEAR_POSTS_PATH))
+	_level_clear_posts = parsed if parsed is Array else []
+
+
+func _get_level_clear_row(lid: String) -> Dictionary:
+	for item in _level_clear_posts:
+		if item is Dictionary and str((item as Dictionary).get("levelid", "")) == lid:
+			return item as Dictionary
+	return {}
+
 
 func _ensure_truth_overlay() -> void:
 	if _truth_layer != null:
@@ -612,7 +675,7 @@ func _ensure_truth_overlay() -> void:
 	_truth_layer.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(330, 280)
+	panel.custom_minimum_size = Vector2(380, 420)
 	panel.add_theme_stylebox_override("panel", _truth_style())
 	center.add_child(panel)
 
@@ -624,7 +687,7 @@ func _ensure_truth_overlay() -> void:
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", 12)
 	margin.add_child(vbox)
 
 	var title := Label.new()
@@ -636,12 +699,44 @@ func _ensure_truth_overlay() -> void:
 	_truth_text_label = Label.new()
 	_truth_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_truth_text_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_truth_text_label.add_theme_font_size_override("font_size", 18)
+	_truth_text_label.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(_truth_text_label)
 
 	_truth_reward_label = Label.new()
 	_truth_reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_truth_reward_label)
+
+	_truth_options_box = VBoxContainer.new()
+	_truth_options_box.add_theme_constant_override("separation", 8)
+	vbox.add_child(_truth_options_box)
+
+	_truth_prompt_label = Label.new()
+	_truth_prompt_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_truth_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_truth_options_box.add_child(_truth_prompt_label)
+
+	_truth_option1_btn = Button.new()
+	_truth_option1_btn.custom_minimum_size = Vector2(260, 40)
+	_truth_option1_btn.pressed.connect(func() -> void: _on_clear_option_pressed(1))
+	_truth_options_box.add_child(_truth_option1_btn)
+
+	_truth_option2_btn = Button.new()
+	_truth_option2_btn.custom_minimum_size = Vector2(260, 40)
+	_truth_option2_btn.pressed.connect(func() -> void: _on_clear_option_pressed(2))
+	_truth_options_box.add_child(_truth_option2_btn)
+
+	_truth_preview_label = Label.new()
+	_truth_preview_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_truth_preview_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_truth_preview_label.visible = false
+	vbox.add_child(_truth_preview_label)
+
+	_truth_goto_btn = Button.new()
+	_truth_goto_btn.text = "前往pubble"
+	_truth_goto_btn.custom_minimum_size = Vector2(220, 48)
+	_truth_goto_btn.visible = false
+	_truth_goto_btn.pressed.connect(_on_clear_goto_pressed)
+	vbox.add_child(_truth_goto_btn)
 
 	var btn := Button.new()
 	btn.text = "返回艺人动态"
@@ -649,6 +744,47 @@ func _ensure_truth_overlay() -> void:
 	btn.pressed.connect(_on_truth_button_pressed)
 	_truth_dismiss_btn = btn
 	vbox.add_child(btn)
+
+
+func _on_clear_option_pressed(option_index: int) -> void:
+	var clear_row: Dictionary = _get_level_clear_row(level_id)
+	if clear_row.is_empty():
+		return
+	var postid: String = str(clear_row.get("option1postid" if option_index == 1 else "option2postid", ""))
+	if postid.is_empty():
+		return
+	_selected_main_postid = postid
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	var title := postid
+	var text := ""
+	if expose != null and expose.has_method("get_my_post"):
+		var mp: Dictionary = expose.get_my_post(postid)
+		title = str(mp.get("title", postid))
+		text = str(mp.get("text", ""))
+	if _truth_preview_label != null:
+		_truth_preview_label.visible = true
+		_truth_preview_label.text = "主线贴预览：\n%s\n%s" % [title, text]
+	if _truth_goto_btn != null:
+		_truth_goto_btn.visible = true
+	if _truth_option1_btn != null:
+		_truth_option1_btn.disabled = true
+	if _truth_option2_btn != null:
+		_truth_option2_btn.disabled = true
+
+
+func _on_clear_goto_pressed() -> void:
+	if _selected_main_postid.is_empty():
+		return
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null:
+		expose.post_mainline(_selected_main_postid)
+	if _save_manager != null:
+		_save_manager.set_pending_post_level_nav({
+			"page": "feed",
+			"tab": "account"
+		})
+	get_tree().change_scene_to_file(MAIN_UI_PATH)
+
 
 func _on_truth_button_pressed() -> void:
 	if _truth_is_review_mode:

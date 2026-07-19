@@ -104,6 +104,9 @@ func setup(enriched: Dictionary) -> void:
 	_time_label.text = time_display
 	_time_label.visible = not time_display.is_empty()
 	_body_label.text = body
+	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	# 艺人/粉丝动态：底部操作栏 + artistpostbg；旧 follow 布局仍走双图
 	var show_action_bar := _is_follow_layout or _uses_feed_theme()
@@ -119,6 +122,30 @@ func setup(enriched: Dictionary) -> void:
 		_apply_single_image_left_align()
 	_apply_layout_theme()
 	_apply_follow_action_visual()
+	_apply_scroll_pass_through()
+
+
+# 非交互区域透传滚轮/拖拽给 ScrollContainer
+func _apply_scroll_pass_through() -> void:
+	if has_node("CardMargin"):
+		_pass_mouse_to_scroll(get_node("CardMargin"))
+
+
+func _pass_mouse_to_scroll(node: Node) -> void:
+	if node is BaseButton:
+		return
+	if node is TextureRect:
+		var tr := node as TextureRect
+		if tr.mouse_filter == Control.MOUSE_FILTER_STOP:
+			return
+	if node is ColorRect:
+		var cr := node as ColorRect
+		if cr.mouse_filter == Control.MOUSE_FILTER_STOP:
+			return
+	if node is Control:
+		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in node.get_children():
+		_pass_mouse_to_scroll(child)
 
 
 # 帖子配图左对齐：控件宽度固定 350，避免在宽卡片内居中
@@ -142,6 +169,7 @@ func _apply_single_image(img_path: String) -> void:
 		_single_image.visible = false
 		_single_image.texture = null
 		_single_image_placeholder.visible = false
+		_single_image.custom_minimum_size = Vector2.ZERO
 		_single_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return
 
@@ -152,12 +180,15 @@ func _apply_single_image(img_path: String) -> void:
 			_single_image.texture = load(img_path) as Texture2D
 			_single_image.modulate = Color.WHITE
 			_single_image_placeholder.visible = false
+			_single_image.custom_minimum_size = SINGLE_IMAGE_SIZE
 			_single_image.mouse_filter = Control.MOUSE_FILTER_STOP
 		else:
-			# 没配 image_path：不展示配图区，不要 SingleImagePlaceholder 占位块
+			# 没配 image_path：不展示配图区，不要 SingleImagePlaceholder / 350 高占位
 			_single_image.visible = false
 			_single_image.texture = null
 			_single_image_placeholder.visible = false
+			_single_image.custom_minimum_size = Vector2.ZERO
+			_single_image.size = Vector2.ZERO
 			_single_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return
 

@@ -13,7 +13,9 @@
     "text2": "04.30.2022",
     "grantstars": 3,
     "grantfp": 80,
-    "grantintel": 5,
+    "grantintel": 0,
+    "grantpostid": "3010",
+    "grantpostcount": 1,
     "unlockpostcount": 0
   },
   {
@@ -25,12 +27,14 @@
     "data_dir": "ch1_l02",
     "cheer_reward": 10,
     "bgm_id": "bgm_level_default",
-    "unlockconditionid": 3001,
+    "unlockconditionid": 4,
     "codex_unlock_id": 0,
     "text2": "04.30.2023",
     "grantstars": 0,
     "grantfp": 0,
     "grantintel": 0,
+    "grantpostid": "",
+    "grantpostcount": 0,
     "unlockpostcount": 0
   },
   {
@@ -42,12 +46,14 @@
     "data_dir": "ch1_l03",
     "cheer_reward": 10,
     "bgm_id": "bgm_level_default",
-    "unlockconditionid": 3001,
+    "unlockconditionid": 8,
     "codex_unlock_id": 0,
     "text2": "04.30.2024",
     "grantstars": 0,
     "grantfp": 0,
     "grantintel": 0,
+    "grantpostid": "",
+    "grantpostcount": 0,
     "unlockpostcount": 0
   },
   {
@@ -65,6 +71,8 @@
     "grantstars": 0,
     "grantfp": 0,
     "grantintel": 0,
+    "grantpostid": "",
+    "grantpostcount": 0,
     "unlockpostcount": 0
   },
   {
@@ -82,6 +90,8 @@
     "grantstars": 0,
     "grantfp": 0,
     "grantintel": 0,
+    "grantpostid": "",
+    "grantpostcount": 0,
     "unlockpostcount": 0
   }
 ]

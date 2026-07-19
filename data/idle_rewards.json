@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1001,
+    "intervalmin": 8,
+    "intervalmax": 15,
+    "fpcap": 60,
+    "fanscap": 30
+  },
+  {
+    "id": 1002,
+    "intervalmin": 20,
+    "intervalmax": 40,
+    "fpcap": 20,
+    "fanscap": 10
+  }
+]

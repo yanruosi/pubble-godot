@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://b3heoppt017kg"
+
+[deps]
+
+files=["res://data_src/xlsx表/通关发帖表.prompttitle.translation", "res://data_src/xlsx表/通关发帖表.prompttext.translation", "res://data_src/xlsx表/通关发帖表.option1text.translation", "res://data_src/xlsx表/通关发帖表.option1postid.translation", "res://data_src/xlsx表/通关发帖表.option2text.translation", "res://data_src/xlsx表/通关发帖表.option2postid.translation", "res://data_src/xlsx表/通关发帖表.gotobtntext.translation"]
+
+source_file="res://data_src/xlsx表/通关发帖表.csv"
+dest_files=["res://data_src/xlsx表/通关发帖表.prompttitle.translation", "res://data_src/xlsx表/通关发帖表.prompttext.translation", "res://data_src/xlsx表/通关发帖表.option1text.translation", "res://data_src/xlsx表/通关发帖表.option1postid.translation", "res://data_src/xlsx表/通关发帖表.option2text.translation", "res://data_src/xlsx表/通关发帖表.option2postid.translation", "res://data_src/xlsx表/通关发帖表.gotobtntext.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

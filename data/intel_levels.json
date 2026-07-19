@@ -3,6 +3,8 @@
     "level": 0,
     "name": "路人吃瓜",
     "thresholdintel": 0,
+    "keypostcount": 0,
+    "fermentcapsec": "0",
     "unlockconditionid": 0,
     "grantfp": 0,
     "grantstars": 0
@@ -10,15 +12,19 @@
   {
     "level": 1,
     "name": "圈内新秀",
-    "thresholdintel": 10,
-    "unlockconditionid": 4,
+    "thresholdintel": 0,
+    "keypostcount": 2,
+    "fermentcapsec": "0",
+    "unlockconditionid": 0,
     "grantfp": 50,
     "grantstars": 0
   },
   {
     "level": 2,
     "name": "情报老手",
-    "thresholdintel": 30,
+    "thresholdintel": 0,
+    "keypostcount": 4,
+    "fermentcapsec": "0",
     "unlockconditionid": 0,
     "grantfp": 100,
     "grantstars": 0

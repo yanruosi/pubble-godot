@@ -127,7 +127,7 @@ func _test_upgrade_intel() -> void:
 		_fail("autoload missing for intel upgrade")
 		return
 	sm.reset_progress()
-	sm.intel = 10
+	sm.keypost_progress = 2
 	sm.intellevel = 0
 	if not eco.try_upgrade_intel():
 		_fail("try_upgrade_intel")

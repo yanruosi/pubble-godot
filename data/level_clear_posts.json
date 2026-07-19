@@ -1,0 +1,22 @@
+[
+  {
+    "levelid": "ch1_l01",
+    "prompttitle": "今晚怎么说？",
+    "prompttext": "通关后选择你要发出的主线贴",
+    "option1text": "写长文还原真相",
+    "option1postid": "5201",
+    "option2text": "发情绪安利",
+    "option2postid": "5202",
+    "gotobtntext": "前往我的账号发帖"
+  },
+  {
+    "levelid": "ch1_l02",
+    "prompttitle": "走廊要不要爆？",
+    "prompttext": "你在后台走廊看到了线索",
+    "option1text": "冷静回顾",
+    "option1postid": "5203",
+    "option2text": "直接爆料",
+    "option2postid": "5204",
+    "gotobtntext": "前往我的账号发帖"
+  }
+]

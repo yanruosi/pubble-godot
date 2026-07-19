@@ -1,0 +1,5 @@
+levelid,prompttitle,prompttext,option1text,option1postid,option2text,option2postid,gotobtntext
+string,string,string,string,string,string,string,string
+关卡id,弹窗标题,题干,选项1,选项1帖id,选项2,选项2帖id,前往按钮
+ch1_l01,今晚怎么说？,通关后选择你要发出的主线贴,写长文还原真相,5201,发情绪安利,5202,前往我的账号发帖
+ch1_l02,走廊要不要爆？,你在后台走廊看到了线索,冷静回顾,5203,直接爆料,5204,前往我的账号发帖

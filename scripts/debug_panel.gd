@@ -40,9 +40,11 @@ func _build_ui() -> void:
 
 	box.add_child(_label("调试面板 (F12)"))
 	box.add_child(_btn("+10 饭圈积分", func() -> void: _add_currency(22, 10)))
-	box.add_child(_btn("+10 情报点", func() -> void: _add_currency(24, 10)))
 	box.add_child(_btn("+3 星星", func() -> void: _add_currency(23, 3)))
-	box.add_child(_btn("升级情报等级", func() -> void: _upgrade_intel()))
+	box.add_child(_btn("+1 关键帖", func() -> void: _add_keypost()))
+	box.add_child(_btn("跳过曝光", func() -> void: _skip_expose()))
+	box.add_child(_btn("+发帖次数 tag_music", func() -> void: _add_post_count()))
+	box.add_child(_btn("升级线索等级", func() -> void: _upgrade_intel()))
 	box.add_child(_btn("升级会员等级", func() -> void: _upgrade_fan()))
 	box.add_child(_btn("购买教程专辑", func() -> void: _buy_offer(1)))
 	box.add_child(_btn("活动·机场1", func() -> void: _act("1")))
@@ -75,9 +77,10 @@ func _refresh() -> void:
 	if sm == null or lbl == null:
 		return
 	var lines: PackedStringArray = [
-		"饭圈积分=%d  情报点=%d  星星=%d" % [sm.fp, sm.intel, sm.stars],
-		"情报等级=%d  会员等级=%d  站子经验=%d" % [sm.intellevel, sm.fanlevel, sm.stationexp],
-		"放置帖=%d  背包=%s" % [sm.feed_instances.size(), str(sm.inventory)],
+		"饭圈积分=%d  星星=%d" % [sm.fp, sm.stars],
+		"线索Lv=%d  关键帖=%d  粉丝=%d  热门=%d" % [sm.intellevel, sm.keypost_progress, sm.fans, sm.hotcount],
+		"站姐等级=%d  发帖次数=%s" % [sm.fanlevel, str(sm.post_counts)],
+		"曝光队列=%d  放置帖=%d  背包=%s" % [sm.mypost_queue.size(), sm.feed_instances.size(), str(sm.inventory)],
 	]
 	lbl.text = "\n".join(lines)
 
@@ -93,6 +96,27 @@ func _upgrade_intel() -> void:
 	var eco: EconomyManager = get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
 	if eco != null:
 		eco.try_upgrade_intel()
+	_refresh()
+
+
+func _add_keypost() -> void:
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null:
+		expose.debug_add_keypost()
+	_refresh()
+
+
+func _skip_expose() -> void:
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null:
+		expose.debug_skip_expose()
+	_refresh()
+
+
+func _add_post_count() -> void:
+	var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
+	if expose != null:
+		expose.debug_add_post_count("tag_music", 1)
 	_refresh()
 
 
@@ -149,5 +173,5 @@ func _reset() -> void:
 	if sm != null:
 		sm.reset_progress()
 	if expose != null:
-		expose.seed_tutorial_instance()
+		expose.on_game_loaded()
 	_refresh()

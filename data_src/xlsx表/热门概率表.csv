@@ -1,0 +1,7 @@
+﻿heatmin,heatmax,bonusrate
+int,int,int
+热度下限,热度上限,加成概率
+0,14,0
+15,29,20
+30,49,40
+50,999,60

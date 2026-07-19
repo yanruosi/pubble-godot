@@ -1,0 +1,18 @@
+[
+  {
+    "actiontype": "like",
+    "heatvalue": 2
+  },
+  {
+    "actiontype": "fav",
+    "heatvalue": 5
+  },
+  {
+    "actiontype": "clear",
+    "heatvalue": 20
+  },
+  {
+    "actiontype": "trade",
+    "heatvalue": 10
+  }
+]

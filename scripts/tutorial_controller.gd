@@ -1,6 +1,9 @@
 extends Node
 class_name TutorialController
 
+## M3.5 灰盒阶段先关闭教程 UI；后续改回 true 或接配表开关。
+const TUTORIAL_ENABLED := false
+
 const STEPS := [
 	"打开嫂子站 Tab",
 	"点击曝光",
@@ -42,6 +45,8 @@ func _build_overlay() -> void:
 
 
 func is_active() -> bool:
+	if not TUTORIAL_ENABLED:
+		return false
 	if _save_manager == null:
 		return false
 	return not _save_manager.tutorialdone
@@ -54,6 +59,8 @@ func get_step() -> int:
 
 
 func advance_step() -> void:
+	if not TUTORIAL_ENABLED:
+		return
 	if _save_manager == null:
 		return
 	if _save_manager.tutorialdone:
@@ -67,6 +74,10 @@ func advance_step() -> void:
 
 
 func show_hint_for_step(step: int) -> void:
+	if not TUTORIAL_ENABLED:
+		if _overlay != null:
+			_overlay.visible = false
+		return
 	if _save_manager == null or _save_manager.tutorialdone:
 		_overlay.visible = false
 		return

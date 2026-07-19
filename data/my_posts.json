@@ -1,0 +1,86 @@
+[
+  {
+    "mypostid": "5001",
+    "tagid": "tag_music",
+    "title": "音乐节前排直拍repo",
+    "text": "前排直拍repo内容",
+    "exposesec": 150,
+    "basefp": 200,
+    "hotbonusfp": 100,
+    "basefans": 20,
+    "hotbasechance": 30,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5002",
+    "tagid": "tag_music",
+    "title": "音乐节应援色海洋",
+    "text": "应援色海洋内容",
+    "exposesec": 150,
+    "basefp": 200,
+    "hotbonusfp": 100,
+    "basefans": 20,
+    "hotbasechance": 30,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5101",
+    "tagid": "tag_airport",
+    "title": "机场接机高清生图",
+    "text": "机场接机内容",
+    "exposesec": 120,
+    "basefp": 120,
+    "hotbonusfp": 60,
+    "basefans": 12,
+    "hotbasechance": 30,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5201",
+    "tagid": "tag_main",
+    "title": "化妆室真相长文",
+    "text": "我认为真相在化妆室的镜子背后",
+    "exposesec": 90,
+    "basefp": 150,
+    "hotbonusfp": 80,
+    "basefans": 30,
+    "hotbasechance": 50,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5202",
+    "tagid": "tag_main",
+    "title": "化妆室情绪安利",
+    "text": "今晚的妆面背后藏着不安",
+    "exposesec": 90,
+    "basefp": 150,
+    "hotbonusfp": 80,
+    "basefans": 30,
+    "hotbasechance": 50,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5203",
+    "tagid": "tag_main",
+    "title": "后台走廊回顾",
+    "text": "走廊里的脚步声指向下一站",
+    "exposesec": 90,
+    "basefp": 200,
+    "hotbonusfp": 100,
+    "basefans": 40,
+    "hotbasechance": 50,
+    "idlerewardid": 1001
+  },
+  {
+    "mypostid": "5204",
+    "tagid": "tag_main",
+    "title": "后台走廊爆料",
+    "text": "后台门缝里看见了不该看的一幕",
+    "exposesec": 90,
+    "basefp": 200,
+    "hotbonusfp": 100,
+    "basefans": 40,
+    "hotbasechance": 50,
+    "idlerewardid": 1001
+  }
+]

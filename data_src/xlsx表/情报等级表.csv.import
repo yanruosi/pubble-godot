@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://w0j353h5tevf"
+
+[deps]
+
+files=["res://data_src/xlsx表/情报等级表.name.translation", "res://data_src/xlsx表/情报等级表.thresholdintel.translation", "res://data_src/xlsx表/情报等级表.keypostcount.translation", "res://data_src/xlsx表/情报等级表.fermentcapsec.translation", "res://data_src/xlsx表/情报等级表.unlockconditionid.translation", "res://data_src/xlsx表/情报等级表.grantfp.translation", "res://data_src/xlsx表/情报等级表.grantstars.translation"]
+
+source_file="res://data_src/xlsx表/情报等级表.csv"
+dest_files=["res://data_src/xlsx表/情报等级表.name.translation", "res://data_src/xlsx表/情报等级表.thresholdintel.translation", "res://data_src/xlsx表/情报等级表.keypostcount.translation", "res://data_src/xlsx表/情报等级表.fermentcapsec.translation", "res://data_src/xlsx表/情报等级表.unlockconditionid.translation", "res://data_src/xlsx表/情报等级表.grantfp.translation", "res://data_src/xlsx表/情报等级表.grantstars.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

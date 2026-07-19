@@ -1,25 +1,25 @@
 [
   {
     "tabtype": 0,
-    "activedurationsec": 30,
-    "activegranttype": 22,
-    "activegrantamt": 10,
+    "activedurationsec": "30",
+    "activegranttype": "22",
+    "activegrantamt": "10",
     "offlinedurationsec": 150,
     "offlinemaxsec": 28800
   },
   {
     "tabtype": 903,
-    "activedurationsec": 30,
-    "activegranttype": 24,
-    "activegrantamt": 5,
+    "activedurationsec": "30",
+    "activegranttype": "24",
+    "activegrantamt": "5",
     "offlinedurationsec": 150,
     "offlinemaxsec": 28800
   },
   {
     "tabtype": 904,
-    "activedurationsec": 30,
-    "activegranttype": 22,
-    "activegrantamt": 1,
+    "activedurationsec": "30",
+    "activegranttype": "22",
+    "activegrantamt": "1",
     "offlinedurationsec": 300,
     "offlinemaxsec": 28800
   }

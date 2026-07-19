@@ -72,6 +72,7 @@ var _activity_settle_close_btn: Button
 var _activity_settle_go_btn: Button
 var _activity_toast: Label
 var _last_settle_reveal_tab: String = "fandom"
+var _opening_settle_pending: bool = false
 
 var _shop_panel: Control
 
@@ -92,31 +93,6 @@ var _activity: ActivityManager
 var _expose: ExposeManager
 var _inventory: InventoryManager
 
-const DEBUG_LOG_PATH := "d:/GAMES/pubble-v1/debug-7376c9.log"
-
-
-func _dbg_log(hypothesis_id: String, location: String, message: String, data: Dictionary = {}) -> void:
-	#region agent log
-	var payload := {
-		"sessionId": "7376c9",
-		"hypothesisId": hypothesis_id,
-		"location": location,
-		"message": message,
-		"data": data,
-		"timestamp": Time.get_unix_time_from_system() * 1000,
-		"runId": "post-fix",
-	}
-	var exists := FileAccess.file_exists(DEBUG_LOG_PATH)
-	var mode := FileAccess.READ_WRITE if exists else FileAccess.WRITE
-	var f := FileAccess.open(DEBUG_LOG_PATH, mode)
-	if f == null:
-		return
-	if exists:
-		f.seek_end()
-	f.store_line(JSON.stringify(payload))
-	f.close()
-	#endregion
-
 
 func setup(home_page: Control) -> void:
 	layer = 320
@@ -128,6 +104,20 @@ func setup(home_page: Control) -> void:
 	_build_activity_panel()
 	_build_shop_panel()
 	_add_home_buttons(home_page)
+
+
+func on_home_entered() -> void:
+	if _is_opening_flow():
+		call_deferred("_open_activity_panel")
+
+
+func _is_opening_flow() -> bool:
+	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if sm == null:
+		return false
+	if sm.get("opening_done") == null:
+		return false
+	return not bool(sm.opening_done)
 
 
 func _add_home_buttons(home_page: Control) -> void:
@@ -461,13 +451,6 @@ func _open_activity_panel() -> void:
 
 
 func _open_shop_panel() -> void:
-	#region agent log
-	_dbg_log("A", "home_overlays.gd:_open_shop_panel", "open shop", {
-		"shop_null": _shop == null,
-		"tutorial_done": _get_tutorial_done(),
-		"fp": _get_fp(),
-	})
-	#endregion
 	_refresh_shop_panel()
 	_shop_panel.visible = true
 
@@ -489,11 +472,14 @@ func _activities_for_tab(tab: int) -> Array:
 	for act in _activity.get_visible_activities():
 		if not (act is Dictionary):
 			continue
-		var cat: int = int((act as Dictionary).get("category", 0))
+		var row: Dictionary = act as Dictionary
+		if _is_opening_flow() and str(row.get("activityid", "")) != "1":
+			continue
+		var cat: int = int(row.get("category", 0))
 		if tab == TAB_SHOW and (cat == 2 or cat == 3):
-			out.append(act)
+			out.append(row)
 		elif tab == TAB_DAILY and cat == 1:
-			out.append(act)
+			out.append(row)
 	return out
 
 
@@ -534,6 +520,8 @@ func _on_activity_next_pressed() -> void:
 func _refresh_activity_panel() -> void:
 	if _activity_panel == null:
 		return
+	if _is_opening_flow():
+		_activity_tab_index = TAB_DAILY
 	var list: Array = _current_tab_activities()
 	var has_items := not list.is_empty()
 	if has_items:
@@ -548,9 +536,16 @@ func _refresh_activity_panel() -> void:
 	if _activity_action_btn != null and has_items:
 		var act: Dictionary = list[_activity_item_index] as Dictionary
 		var aid: String = str(act.get("activityid", ""))
-		_activity_action_btn.disabled = _get_activity_state(aid) == ActivityManager.STATE_DEPARTED
+		var blocked := _get_activity_state(aid) == ActivityManager.STATE_DEPARTED
+		if _is_opening_flow() and aid != "1":
+			blocked = true
+		_activity_action_btn.disabled = blocked
 	elif _activity_action_btn != null:
 		_activity_action_btn.disabled = true
+
+	for i in range(_activity_tab_btns.size()):
+		if _activity_tab_btns[i] != null:
+			_activity_tab_btns[i].disabled = _is_opening_flow() and i != TAB_DAILY
 
 
 func _bind_activity_empty_tab() -> void:
@@ -637,27 +632,6 @@ func _on_activity_action_pressed() -> void:
 		if not bool(result.get("ok", false)):
 			_show_activity_toast(str(result.get("reason", "活动失败")))
 		else:
-			#region agent log
-			var payload := {
-				"sessionId": "c0d936",
-				"hypothesisId": "E",
-				"location": "home_overlays.gd:_on_activity_action_pressed",
-				"message": "airport settle",
-				"data": {
-					"aid": aid,
-					"reveal_tab": str(result.get("reveal_tab", "")),
-					"sister_count": int(result.get("sister_count", 0)),
-				},
-				"timestamp": Time.get_unix_time_from_system() * 1000,
-				"runId": "reveal-fix",
-			}
-			var lf := FileAccess.open("debug-c0d936.log", FileAccess.READ_WRITE if FileAccess.file_exists("debug-c0d936.log") else FileAccess.WRITE)
-			if lf != null:
-				if FileAccess.file_exists("debug-c0d936.log"):
-					lf.seek_end()
-				lf.store_line(JSON.stringify(payload))
-				lf.close()
-			#endregion
 			_show_activity_settle(result)
 		_refresh_activity_panel()
 		return
@@ -670,16 +644,29 @@ func _on_activity_action_pressed() -> void:
 
 
 func _do_activity_draw(activity_id: String) -> void:
+	var act: Dictionary = _current_activity()
+	var force_first_win := _is_opening_flow() and int(act.get("winratefirst", 0)) >= 1
 	var result: Dictionary = _activity.draw_lottery(activity_id)
 	if not bool(result.get("ok", false)):
 		_show_activity_toast(str(result.get("reason", "抽选失败")))
 		_refresh_activity_panel()
 		return
+	if force_first_win and not bool(result.get("won", false)):
+		if _save_manager_set_won(activity_id):
+			result["won"] = true
 	if bool(result.get("won", false)):
 		_activity_store3_overlay.visible = true
 	else:
 		_show_activity_toast("未中签")
 	_refresh_activity_panel()
+
+
+func _save_manager_set_won(activity_id: String) -> bool:
+	var sm: SaveManager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if sm == null:
+		return false
+	sm.set_activity_state(activity_id, ActivityManager.STATE_WON)
+	return true
 
 
 func _do_activity_depart(activity_id: String) -> void:
@@ -693,13 +680,30 @@ func _do_activity_depart(activity_id: String) -> void:
 
 
 func _show_activity_settle(result: Dictionary) -> void:
-	_last_settle_reveal_tab = str(result.get("reveal_tab", "fandom"))
+	var act: Dictionary = result.get("activity", {}) as Dictionary
+	_opening_settle_pending = _is_opening_flow()
+	_last_settle_reveal_tab = "account" if _opening_settle_pending else str(result.get("reveal_tab", "fandom"))
 	if _activity_settle_event != null:
 		_activity_settle_event.text = str(result.get("event_text", ""))
 	if _activity_settle_rewards != null:
 		var lines: PackedStringArray = []
+		var grant_count: int = int(result.get("grant_count", act.get("grantcountfirst", 0)))
+		var grant_tag: String = str(result.get("grant_tagid", act.get("granttagid", "")))
+		if grant_count > 0:
+			lines.append("发帖次数 +%d" % grant_count)
+		if not grant_tag.is_empty():
+			lines.append("解锁标签「%s」" % _tag_display_name(grant_tag))
 		var fh: int = int(result.get("fandom_hq_count", 0))
 		var sc: int = int(result.get("sister_count", 0))
+		var fn: int = int(result.get("feed_normal_count", act.get("feednormalcount", 0)))
+		var fa: int = int(result.get("feed_advanced_count", act.get("feedadvancedcount", 0)))
+		var fk: int = int(result.get("feed_key_count", act.get("feedkeycount", 0)))
+		if fn > 0:
+			lines.append("饭圈普通帖 %d 条" % fn)
+		if fa > 0:
+			lines.append("饭圈高级帖 %d 条" % fa)
+		if fk > 0:
+			lines.append("关键帖 %d 条" % fk)
 		if fh > 0:
 			lines.append("饭圈新增高质量帖子 %d 条" % fh)
 		if sc > 0:
@@ -707,10 +711,26 @@ func _show_activity_settle(result: Dictionary) -> void:
 		if lines.is_empty():
 			lines.append("本次暂无新帖子产出")
 		_activity_settle_rewards.text = "\n".join(lines)
+	if _activity_settle_go_btn != null:
+		_activity_settle_go_btn.text = "前往发帖" if _opening_settle_pending else "前往pubble查看"
 	if _activity_panel != null:
 		_activity_panel.visible = false
 	if _activity_store5_overlay != null:
 		_activity_store5_overlay.visible = true
+
+
+func _tag_display_name(tagid: String) -> String:
+	if _expose != null and _expose.has_method("get_tag_name"):
+		return str(_expose.call("get_tag_name", tagid))
+	match tagid:
+		"tag_music":
+			return "音乐节"
+		"tag_airport":
+			return "机场"
+		"tag_rural":
+			return "乡下表演"
+		_:
+			return tagid
 
 
 func _close_activity_settle() -> void:
@@ -723,7 +743,18 @@ func _close_activity_settle() -> void:
 func _on_settle_go_pubble_pressed() -> void:
 	_close_activity_settle()
 	var router: Node = get_parent()
-	if router != null and router.has_method("open_feed_tab"):
+	if router == null:
+		return
+	if _opening_settle_pending:
+		_opening_settle_pending = false
+		if router.has_method("set_pending_first_post"):
+			router.call("set_pending_first_post", true)
+		if router.has_method("open_feed_account_tab"):
+			router.call("open_feed_account_tab")
+		elif router.has_method("open_feed_tab"):
+			router.call("open_feed_tab", "account")
+		return
+	if router.has_method("open_feed_tab"):
 		router.call("open_feed_tab", _last_settle_reveal_tab)
 
 
@@ -785,12 +816,6 @@ func _refresh_shop_offer_slots() -> void:
 		_clear_shop_slot(i)
 	var offers: Array = _shop.get_visible_offers(1)
 	var count: int = mini(offers.size(), 2)
-	#region agent log
-	_dbg_log("A", "home_overlays.gd:_refresh_shop_offer_slots", "offers loaded", {
-		"count": count,
-		"offer_ids": offers.map(func(o): return int(o.get("offerid", 0)) if o is Dictionary else -1),
-	})
-	#endregion
 	for i in range(count):
 		if not (offers[i] is Dictionary):
 			continue
@@ -832,28 +857,9 @@ func _bind_shop_slot(index: int, offer: Dictionary) -> void:
 			_shop_slot_icon[index].texture = null
 	if index < _shop_slot_buy.size():
 		_shop_slot_buy[index].disabled = false
-	#region agent log
-	_dbg_log("BCE", "home_overlays.gd:_bind_shop_slot", "slot bound", {
-		"index": index,
-		"offerid": offerid,
-		"price_text": _shop_slot_price[index].text if index < _shop_slot_price.size() else "",
-		"desc_text": _shop_slot_desc[index].text if index < _shop_slot_desc.size() else "",
-		"buy_text": _shop_slot_buy[index].text if index < _shop_slot_buy.size() else "",
-		"buy_disabled": _shop_slot_buy[index].disabled if index < _shop_slot_buy.size() else true,
-		"desc_rect": str(_shop_slot_desc[index].position) if index < _shop_slot_desc.size() else "",
-		"price_rect": str(_shop_slot_price[index].position) if index < _shop_slot_price.size() else "",
-		"buy_rect": str(_shop_slot_buy[index].position) if index < _shop_slot_buy.size() else "",
-	})
-	#endregion
 
 
 func _on_shop_slot_buy_pressed(slot_index: int) -> void:
-	#region agent log
-	_dbg_log("D", "home_overlays.gd:_on_shop_slot_buy_pressed", "buy pressed", {
-		"slot_index": slot_index,
-		"offerid": _shop_slot_offer_ids[slot_index] if slot_index < _shop_slot_offer_ids.size() else -1,
-	})
-	#endregion
 	if slot_index < 0 or slot_index >= _shop_slot_offer_ids.size():
 		return
 	var offerid: int = _shop_slot_offer_ids[slot_index]
@@ -864,9 +870,6 @@ func _on_shop_slot_buy_pressed(slot_index: int) -> void:
 
 func _on_buy_offer(offerid: int) -> void:
 	var ok := _shop != null and _shop.purchase(offerid)
-	#region agent log
-	_dbg_log("D", "home_overlays.gd:_on_buy_offer", "purchase result", {"offerid": offerid, "ok": ok})
-	#endregion
 	if ok:
 		_refresh_shop_panel()
 

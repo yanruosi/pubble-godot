@@ -1,0 +1,22 @@
+[
+  {
+    "tagid": "tag_music",
+    "name": "音乐节",
+    "sourceactivityid": "1"
+  },
+  {
+    "tagid": "tag_airport",
+    "name": "机场",
+    "sourceactivityid": "4"
+  },
+  {
+    "tagid": "tag_rural",
+    "name": "乡下表演",
+    "sourceactivityid": "7"
+  },
+  {
+    "tagid": "tag_main",
+    "name": "主线通关",
+    "sourceactivityid": "level"
+  }
+]

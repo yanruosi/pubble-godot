@@ -1,0 +1,7 @@
+﻿tagid,name,sourceactivityid
+string,string,string
+标签id,名称,来源活动
+tag_music,音乐节,1
+tag_airport,机场,4
+tag_rural,乡下表演,7
+tag_main,主线通关,level

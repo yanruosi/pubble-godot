@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://o67w135chkqm"
+
+[deps]
+
+files=["res://data_src/xlsx表/站子等级表.name.translation", "res://data_src/xlsx表/站子等级表.thresholdexp.translation", "res://data_src/xlsx表/站子等级表.hotcountgoal.translation", "res://data_src/xlsx表/站子等级表.rewardfp.translation", "res://data_src/xlsx表/站子等级表.postcapbonus.translation", "res://data_src/xlsx表/站子等级表.rewarditemid.translation", "res://data_src/xlsx表/站子等级表.rewarditemcount.translation", "res://data_src/xlsx表/站子等级表.idolkara.translation", "res://data_src/xlsx表/站子等级表.videocallid.translation"]
+
+source_file="res://data_src/xlsx表/站子等级表.csv"
+dest_files=["res://data_src/xlsx表/站子等级表.name.translation", "res://data_src/xlsx表/站子等级表.thresholdexp.translation", "res://data_src/xlsx表/站子等级表.hotcountgoal.translation", "res://data_src/xlsx表/站子等级表.rewardfp.translation", "res://data_src/xlsx表/站子等级表.postcapbonus.translation", "res://data_src/xlsx表/站子等级表.rewarditemid.translation", "res://data_src/xlsx表/站子等级表.rewarditemcount.translation", "res://data_src/xlsx表/站子等级表.idolkara.translation", "res://data_src/xlsx表/站子等级表.videocallid.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

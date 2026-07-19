@@ -11,6 +11,10 @@ const STATE_DEPARTED := "departed"
 const TAB_FANDOM := 0
 const TAB_SISTER := 903
 
+const POSTCLASS_NORMAL := 1
+const POSTCLASS_ADVANCED := 2
+const POSTCLASS_KEY := 3
+
 var _save_manager: SaveManager
 var _economy_manager: EconomyManager
 var _condition_checker: ConditionChecker
@@ -55,17 +59,42 @@ func get_visible_activities() -> Array:
 
 
 func _is_activity_visible(act: Dictionary) -> bool:
+	if int(act.get("openingonly", 0)) == 1:
+		if _save_manager != null and _save_manager.opening_done:
+			return false
+
+	var need_fans: int = int(act.get("needfans", 0))
+	if need_fans > 0 and (_save_manager == null or _save_manager.fans < need_fans):
+		return false
+
+	var need_keyposts: int = int(act.get("needkeyposts", 0))
+	if need_keyposts > 0 and (_save_manager == null or _total_keyposts() < need_keyposts):
+		return false
+
 	if int(act.get("tutorialonly", 0)) == 1:
 		var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 		if tutor == null or not tutor.is_active():
 			return false
+
 	var condition_id: int = int(act.get("conditionid", 0))
 	if condition_id > 0 and _condition_checker != null:
 		if not _condition_checker.is_condition_met(condition_id):
 			return false
-	if int(act.get("opinionlock", 0)) == 1:
-		pass
+
 	return true
+
+
+func _total_keyposts() -> int:
+	if _save_manager == null:
+		return 0
+	var total: int = _save_manager.keypost_progress
+	for row in _read_json_array("res://data/intel_levels.json"):
+		if not (row is Dictionary):
+			continue
+		var lvl: int = int((row as Dictionary).get("level", -1))
+		if lvl >= 0 and lvl < _save_manager.intellevel:
+			total += int((row as Dictionary).get("keypostcount", 0))
+	return total
 
 
 func _needs_lottery(act: Dictionary) -> bool:
@@ -107,8 +136,7 @@ func depart(activityid: String) -> Dictionary:
 	var gate: Dictionary = _check_participation_gate(act)
 	if not bool(gate.get("ok", false)):
 		return gate
-	var drawn: Array = _draw_posts(act)
-	return _finalize_settlement(act, drawn, activityid)
+	return _finalize_settlement(act, activityid)
 
 
 func participate(activityid: String) -> Dictionary:
@@ -125,38 +153,39 @@ func participate(activityid: String) -> Dictionary:
 	var pay: Dictionary = _pay_activity_cost(act)
 	if not bool(pay.get("ok", false)):
 		return pay
-	var drawn: Array = _draw_posts(act)
-	return _finalize_settlement(act, drawn, activityid)
+	return _finalize_settlement(act, activityid)
 
 
-func _finalize_settlement(act: Dictionary, drawn: Array, activityid: String) -> Dictionary:
+func _finalize_settlement(act: Dictionary, activityid: String) -> Dictionary:
 	var event_text: String = _pick_result_event(activityid)
-	var counts: Dictionary = _count_settlement_posts(drawn)
+	var is_first: bool = _save_manager == null or not _save_manager.is_activity_first_cleared(activityid)
+
 	if _save_manager != null:
-		var tier: String = "mid"
-		if _economy_manager != null:
-			tier = _economy_manager.get_opinion_tier()
-		var exp_key := "stexpmid"
-		if tier == "low":
-			exp_key = "stexplow"
-		elif tier == "high":
-			exp_key = "stexphigh"
-		_save_manager.stationexp += int(act.get(exp_key, 0))
+		var tagid: String = str(act.get("granttagid", ""))
+		var grant_count: int = int(act.get("grantcountfirst" if is_first else "grantcountrepeat", 0))
+		if not tagid.is_empty() and grant_count > 0:
+			_save_manager.add_post_count(tagid, grant_count)
+
 		_save_manager.set_activity_state(activityid, STATE_DEPARTED)
-	if _expose_manager != null and not drawn.is_empty():
-		_expose_manager.mark_instances_for_reveal(drawn)
+		if is_first:
+			_save_manager.mark_activity_first_cleared(activityid)
+
+	var queued: Array = _queue_feed_pending_posts(act)
 	if int(act.get("category", 0)) == 3:
 		var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 		if tutor != null:
 			tutor.notify_sign_done()
+
+	var counts: Dictionary = _count_queued_posts(queued)
 	return {
 		"ok": true,
-		"drawn": drawn,
+		"queued": queued,
 		"activity": act,
 		"event_text": event_text,
 		"fandom_hq_count": int(counts.get("fandom_hq", 0)),
 		"sister_count": int(counts.get("sister", 0)),
 		"reveal_tab": _resolve_reveal_tab(counts),
+		"is_first_clear": is_first,
 	}
 
 
@@ -179,7 +208,9 @@ func _check_participation_gate(act: Dictionary) -> Dictionary:
 
 
 func _pay_activity_cost(act: Dictionary) -> Dictionary:
-	var cost_fp: int = int(act.get("costfp", 0))
+	var activityid: String = str(act.get("activityid", ""))
+	var is_first: bool = _save_manager == null or not _save_manager.is_activity_first_cleared(activityid)
+	var cost_fp: int = int(act.get("costfpfirst" if is_first else "costfp", 0))
 	if cost_fp > 0:
 		if _economy_manager == null or not _economy_manager.can_afford(22, cost_fp):
 			return {"ok": false, "reason": "饭圈积分不足"}
@@ -194,6 +225,10 @@ func _pay_activity_cost(act: Dictionary) -> Dictionary:
 
 
 func _roll_win(act: Dictionary) -> bool:
+	var activityid: String = str(act.get("activityid", ""))
+	var is_first: bool = _save_manager == null or not _save_manager.is_activity_first_cleared(activityid)
+	if is_first and int(act.get("winratefirst", 0)) == 1:
+		return true
 	if int(act.get("tutorialonly", 0)) == 1:
 		return true
 	var base_rate: int = clampi(int(act.get("winrate", 0)), 0, 100)
@@ -207,7 +242,6 @@ func _roll_win(act: Dictionary) -> bool:
 
 
 func _get_win_bonus() -> int:
-	# P2：咕包装备加成；v1 固定 0
 	return 0
 
 
@@ -217,11 +251,73 @@ func _get_saved_state(activityid: String) -> String:
 	return _save_manager.get_activity_state(activityid)
 
 
-func _draw_posts(act: Dictionary) -> Array:
+func _queue_feed_pending_posts(act: Dictionary) -> Array:
 	var out: Array = []
 	if _expose_manager == null:
 		return out
-	var draw_count: int = int(act.get("drawcount", 1))
+	var types: Array = _activity_output_types(act)
+	var key_count: int = int(act.get("feedkeycount", 0))
+	var adv_count: int = int(act.get("feedadvancedcount", 0))
+	var normal_count: int = int(act.get("feednormalcount", 0))
+
+	for _i in range(key_count):
+		var tpl: Dictionary = _pick_template_by_class(types, POSTCLASS_KEY)
+		if tpl.is_empty():
+			continue
+		out.append(_enqueue_pending(tpl))
+
+	for _i in range(adv_count):
+		var tpl: Dictionary = _pick_template_by_class(types, POSTCLASS_ADVANCED)
+		if tpl.is_empty():
+			continue
+		out.append(_enqueue_pending(tpl))
+
+	for _i in range(normal_count):
+		var tpl: Dictionary = _pick_template_by_class(types, POSTCLASS_NORMAL)
+		if tpl.is_empty():
+			continue
+		out.append(_enqueue_pending(tpl))
+
+	return out
+
+
+func _enqueue_pending(tpl: Dictionary) -> Dictionary:
+	## 结算只入队并掷 delay；冷却从玩家首次进入饭圈动态起算（见 ExposeManager.arm）
+	var min_cd: int = int(tpl.get("refreshcdmin", 2))
+	var max_cd: int = int(tpl.get("refreshcdmax", min_cd))
+	if min_cd <= 0:
+		min_cd = 2
+	if max_cd < min_cd:
+		max_cd = min_cd
+	var delay: int = randi_range(min_cd, max_cd)
+	var tabsource: int = int(tpl.get("tabtype", TAB_SISTER))
+	var postid: String = str(tpl.get("postid", ""))
+	_expose_manager.queue_feed_pending(postid, tabsource, delay)
+	return {"postid": postid, "tabsource": tabsource, "delay_sec": delay, "release_ts": 0}
+
+
+func _pick_template_by_class(posttypes: Array, postclass: int) -> Dictionary:
+	var candidates: Array = []
+	for tpl in _templates:
+		if not (tpl is Dictionary):
+			continue
+		var row: Dictionary = tpl as Dictionary
+		if not posttypes.is_empty() and not posttypes.has(int(row.get("posttype", -1))):
+			continue
+		var cls: int = int(row.get("postclass", POSTCLASS_NORMAL))
+		if cls != postclass:
+			continue
+		if postclass == POSTCLASS_KEY:
+			var keylevel: int = _save_manager.intellevel if _save_manager != null else 0
+			if int(row.get("keylevel", 0)) != keylevel:
+				continue
+		candidates.append(row)
+	if candidates.is_empty():
+		return {}
+	return candidates[randi() % candidates.size()]
+
+
+func _activity_output_types(act: Dictionary) -> Array:
 	var types: Array = []
 	var t1: int = int(act.get("outputposttype1", 0))
 	var t2: int = int(act.get("outputposttype2", 0))
@@ -229,54 +325,26 @@ func _draw_posts(act: Dictionary) -> Array:
 		types.append(t1)
 	if t2 > 0 and t2 != t1:
 		types.append(t2)
-	var tutorial_only: bool = int(act.get("tutorialonly", 0)) == 1
-	for _i in range(draw_count):
-		var picked: Dictionary = _pick_template(types, tutorial_only)
-		if picked.is_empty():
-			continue
-		var inst: Dictionary = _expose_manager.add_instance(
-			str(picked.get("postid", "")),
-			int(picked.get("tabtype", TAB_SISTER))
-		)
-		if not inst.is_empty():
-			out.append(inst)
-	return out
+	return types
 
 
-func _pick_template(posttypes: Array, tutorial_only: bool) -> Dictionary:
-	var tier: String = "mid"
-	if _economy_manager != null:
-		tier = _economy_manager.get_opinion_tier()
-	var weight_key := "weightmid"
-	if tier == "low":
-		weight_key = "weightlow"
-	elif tier == "high":
-		weight_key = "weighthigh"
-	var candidates: Array = []
-	for tpl in _templates:
-		if not (tpl is Dictionary):
+func _count_queued_posts(queued: Array) -> Dictionary:
+	var fandom_hq := 0
+	var sister := 0
+	for item in queued:
+		if not (item is Dictionary):
 			continue
-		if not posttypes.has(int(tpl.get("posttype", -1))):
-			continue
-		if tutorial_only and str(tpl.get("tier", "")) != "A":
-			continue
-		candidates.append(tpl)
-	if candidates.is_empty():
-		return {}
-	if tutorial_only:
-		return candidates[0]
-	var total := 0
-	for tpl in candidates:
-		total += int(tpl.get(weight_key, 0))
-	if total <= 0:
-		return candidates[0]
-	var roll := randi_range(1, total)
-	var acc := 0
-	for tpl in candidates:
-		acc += int(tpl.get(weight_key, 0))
-		if roll <= acc:
-			return tpl
-	return candidates[0]
+		var row: Dictionary = item as Dictionary
+		var tpl: Dictionary = {}
+		if _expose_manager != null:
+			tpl = _expose_manager.get_template(str(row.get("postid", "")))
+		var tabsource: int = int(row.get("tabsource", tpl.get("tabtype", TAB_SISTER)))
+		var tier: String = str(tpl.get("tier", ""))
+		if tabsource == TAB_FANDOM and (tier == "A" or tier == "B"):
+			fandom_hq += 1
+		elif tabsource == TAB_SISTER:
+			sister += 1
+	return {"fandom_hq": fandom_hq, "sister": sister}
 
 
 func _pick_result_event(activityid: String) -> String:
@@ -311,25 +379,6 @@ func _pick_result_event(activityid: String) -> String:
 		if roll <= acc:
 			return str((row as Dictionary).get("text", ""))
 	return str((candidates[0] as Dictionary).get("text", ""))
-
-
-func _count_settlement_posts(drawn: Array) -> Dictionary:
-	var fandom_hq := 0
-	var sister := 0
-	for item in drawn:
-		if not (item is Dictionary):
-			continue
-		var inst: Dictionary = item as Dictionary
-		var tpl: Dictionary = {}
-		if _expose_manager != null:
-			tpl = _expose_manager.get_template(str(inst.get("postid", "")))
-		var tabsource: int = int(inst.get("tabsource", tpl.get("tabtype", TAB_SISTER)))
-		var tier: String = str(tpl.get("tier", ""))
-		if tabsource == TAB_FANDOM and (tier == "A" or tier == "B"):
-			fandom_hq += 1
-		elif tabsource == TAB_SISTER:
-			sister += 1
-	return {"fandom_hq": fandom_hq, "sister": sister}
 
 
 func get_activity(activityid: String) -> Dictionary:

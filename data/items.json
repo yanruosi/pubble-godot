@@ -4,15 +4,13 @@
     "name": "教程普通专辑",
     "category": 1,
     "stacklimit": 99,
-    "tradable": 0,
-    "winrateboost": 0
+    "tradable": 0
   },
   {
     "itemid": 1002,
     "name": "普通专辑",
     "category": 1,
     "stacklimit": 99,
-    "tradable": 0,
-    "winrateboost": 0
+    "tradable": 0
   }
 ]

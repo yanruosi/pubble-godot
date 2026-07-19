@@ -3,6 +3,7 @@ class_name EconomyManager
 
 const INTEL_LEVELS_PATH := "res://data/intel_levels.json"
 const FAN_LEVELS_PATH := "res://data/fan_levels.json"
+const STATION_LEVELS_PATH := "res://data/station_levels.json"
 const ITEMS_PATH := "res://data/items.json"
 
 const CAT_FP := 22
@@ -12,6 +13,7 @@ const CAT_INTEL := 24
 var _save_manager: SaveManager
 var _intel_levels: Array = []
 var _fan_levels: Array = []
+var _station_levels: Array = []
 var _items_by_id: Dictionary = {}
 
 
@@ -23,6 +25,7 @@ func _ready() -> void:
 func _load_tables() -> void:
 	_intel_levels = _read_json_array(INTEL_LEVELS_PATH)
 	_fan_levels = _read_json_array(FAN_LEVELS_PATH)
+	_station_levels = _read_json_array(STATION_LEVELS_PATH)
 	_items_by_id.clear()
 	for item in _read_json_array(ITEMS_PATH):
 		if item is Dictionary:
@@ -91,15 +94,45 @@ func try_upgrade_intel() -> bool:
 	var row: Dictionary = _get_intel_level_row(next_level)
 	if row.is_empty():
 		return false
-	var need: int = int(row.get("thresholdintel", 0))
-	if _save_manager.intel < need:
+	var need: int = int(row.get("keypostcount", 0))
+	if need <= 0 or _save_manager.keypost_progress < need:
 		return false
-	_save_manager.intel -= need
 	_save_manager.intellevel = next_level
+	_save_manager.keypost_progress = 0
 	if int(row.get("grantfp", 0)) > 0:
 		_save_manager.add_currency(CAT_FP, int(row.get("grantfp", 0)))
 	if int(row.get("grantstars", 0)) > 0:
 		_save_manager.add_currency(CAT_STARS, int(row.get("grantstars", 0)))
+	_save_manager.save_progress()
+	return true
+
+
+func get_keypost_target() -> int:
+	var next_level: int = 0
+	if _save_manager != null:
+		next_level = _save_manager.intellevel + 1
+	var row: Dictionary = _get_intel_level_row(next_level)
+	if row.is_empty():
+		return 0
+	return int(row.get("keypostcount", 0))
+
+
+func try_upgrade_station() -> bool:
+	if _save_manager == null:
+		return false
+	var next_level: int = _save_manager.fanlevel + 1
+	var row: Dictionary = _get_station_level_row(next_level)
+	if row.is_empty():
+		return false
+	var need_fans: int = int(row.get("thresholdexp", 0))
+	var need_hot: int = int(row.get("hotcountgoal", 0))
+	if need_fans > 0 and _save_manager.fans < need_fans:
+		return false
+	if need_hot > 0 and _save_manager.hotcount < need_hot:
+		return false
+	_save_manager.fanlevel = next_level
+	if int(row.get("rewardfp", 0)) > 0:
+		_save_manager.add_currency(CAT_FP, int(row.get("rewardfp", 0)))
 	_save_manager.save_progress()
 	return true
 
@@ -136,6 +169,13 @@ func _get_intel_level_row(level: int) -> Dictionary:
 
 func _get_fan_level_row(level: int) -> Dictionary:
 	for item in _fan_levels:
+		if item is Dictionary and int(item.get("level", -1)) == level:
+			return item
+	return {}
+
+
+func _get_station_level_row(level: int) -> Dictionary:
+	for item in _station_levels:
 		if item is Dictionary and int(item.get("level", -1)) == level:
 			return item
 	return {}

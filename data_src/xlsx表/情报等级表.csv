@@ -1,0 +1,6 @@
+﻿level,name,thresholdintel,keypostcount,fermentcapsec,unlockconditionid,grantfp,grantstars
+int,string,int,int,int,int,int,int
+等级,名称,情报阈值,关键帖数,发酵上限,条件,奖励fp,奖励星
+0,路人吃瓜,0,0,0,0,0,0
+1,圈内新秀,0,2,0,0,50,0
+2,情报老手,0,4,0,0,100,0

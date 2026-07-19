@@ -1,0 +1,7 @@
+﻿actiontype,heatvalue
+string,int
+动作,热度
+like,2
+fav,5
+clear,20
+trade,10
