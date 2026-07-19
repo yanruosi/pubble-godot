@@ -9,18 +9,14 @@ var _items_by_id: Dictionary = {}
 
 func _ready() -> void:
 	_save_manager = get_node_or_null("/root/SaveManagerSingleton") as SaveManager
-	for row in _read_json_array(ITEMS_PATH):
+	for row in _table_array("items"):
 		if row is Dictionary:
 			_items_by_id[int(row.get("itemid", 0))] = row
 
 
-func _read_json_array(path: String) -> Array:
-	if not FileAccess.file_exists(path):
-		return []
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if parsed is Array:
-		return parsed
-	return []
+func _table_array(name: String) -> Array:
+	var parsed: Variant = TableRepo.get_table(name)
+	return parsed if parsed is Array else []
 
 
 func add_item(itemid: int, count: int = 1) -> void:

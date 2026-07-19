@@ -1,0 +1,42 @@
+extends RefCounted
+class_name SaveMigrationsIo
+
+const SAVE_VERSION := 5
+
+
+static func save_from(sm, config: ConfigFile) -> void:
+	config.set_value("meta", "save_version", SAVE_VERSION)
+	config.set_value("player", "fp", sm.fp)
+	config.set_value("player", "intel", sm.intel)
+	config.set_value("player", "stars", sm.stars)
+	config.set_value("player", "intellevel", sm.intellevel)
+	config.set_value("player", "fanlevel", sm.fanlevel)
+	config.set_value("player", "stationexp", sm.stationexp)
+	config.set_value("player", "tutorialstep", sm.tutorialstep)
+	config.set_value("player", "tutorialdone", sm.tutorialdone)
+	config.set_value("player", "keypost_progress", sm.keypost_progress)
+	config.set_value("player", "keypost_pity", sm.keypost_pity)
+	config.set_value("player", "opening_done", sm.opening_done)
+	config.set_value("player", "post_counts", sm.post_counts)
+	config.set_value("player", "mypost_queue", sm.mypost_queue)
+	config.set_value("player", "favorites", sm.favorites)
+	config.set_value("player", "fans", sm.fans)
+	config.set_value("player", "hotcount", sm.hotcount)
+	config.set_value("player", "activity_first_clear", sm.activity_first_clear)
+	config.set_value("player", "feed_pending", sm.feed_pending)
+	config.set_value("player", "recent_opened_chapter_id", sm.recent_opened_chapter_id)
+	config.set_value("player", "recent_opened_level_id", sm.recent_opened_level_id)
+	config.set_value("chapter", "completed", sm.chapter_completed)
+	config.set_value("chapter", "unlocked", sm.chapter_unlocked)
+	config.set_value("chapter", "new_badge", sm.chapter_new_badge)
+	config.set_value("level", "unlocked", sm.level_unlocked)
+	config.set_value("level", "completed", sm.level_completed)
+	config.set_value("level", "progress", sm.level_progress)
+	config.set_value("level_hotspot", "clicked", sm.level_hotspot_clicked)
+	config.set_value("inventory", "items", sm.inventory)
+	config.set_value("instances", "feed", sm.feed_instances)
+	config.set_value("instances", "id_counter", sm._instance_id_counter)
+	config.set_value("banner", "last_offline_ts", sm.banner_last_offline_ts)
+	config.set_value("feed", "seen", sm.feed_seen)
+	config.set_value("feed", "pinned_post_id", sm.feed_pinned_post_id)
+	config.set_value("activity", "state", sm.activity_state)

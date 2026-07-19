@@ -170,4 +170,4 @@ stretch_mode = 5
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.92, 0.94, 1)
 theme_override_font_sizes/font_size = 13
-text = "置顶"
+text = "收藏"

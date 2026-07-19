@@ -123,6 +123,10 @@ func setup(enriched: Dictionary) -> void:
 	_apply_layout_theme()
 	_apply_follow_action_visual()
 	_apply_scroll_pass_through()
+	if _pin_btn != null:
+		var pin_col := _pin_btn.get_parent()
+		if pin_col is CanvasItem:
+			(pin_col as CanvasItem).visible = not _is_artist_layout
 
 
 # 非交互区域透传滚轮/拖拽给 ScrollContainer

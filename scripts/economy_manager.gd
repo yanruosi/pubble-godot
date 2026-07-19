@@ -23,24 +23,20 @@ func _ready() -> void:
 
 
 func _load_tables() -> void:
-	_intel_levels = _read_json_array(INTEL_LEVELS_PATH)
-	_fan_levels = _read_json_array(FAN_LEVELS_PATH)
-	_station_levels = _read_json_array(STATION_LEVELS_PATH)
+	_intel_levels = _table_array("intel_levels")
+	_fan_levels = _table_array("fan_levels")
+	_station_levels = _table_array("station_levels")
 	_items_by_id.clear()
-	for item in _read_json_array(ITEMS_PATH):
+	for item in _table_array("items"):
 		if item is Dictionary:
 			var id: int = int(item.get("itemid", 0))
 			if id > 0:
 				_items_by_id[id] = item
 
 
-func _read_json_array(path: String) -> Array:
-	if not FileAccess.file_exists(path):
-		return []
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if parsed is Array:
-		return parsed
-	return []
+func _table_array(name: String) -> Array:
+	var parsed: Variant = TableRepo.get_table(name)
+	return parsed if parsed is Array else []
 
 
 func add_currency(type: int, amount: int, _reason: String = "") -> void:

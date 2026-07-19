@@ -21,7 +21,7 @@ func _load_json_data() -> void:
 	_levels_by_id.clear()
 	_levels_by_chapter_id.clear()
 
-	var chapters_raw: Variant = _read_json_file(CHAPTERS_JSON_PATH)
+	var chapters_raw: Variant = TableRepo.get_table("chapters")
 	if chapters_raw is Array:
 		for item in chapters_raw:
 			if item is Dictionary:
@@ -30,14 +30,14 @@ func _load_json_data() -> void:
 			return int(a.get("order", 0)) < int(b.get("order", 0))
 		)
 
-	var conditions_raw: Variant = _read_json_file(CONDITIONS_JSON_PATH)
+	var conditions_raw: Variant = TableRepo.get_table("conditions")
 	if conditions_raw is Array:
 		for item in conditions_raw:
 			if item is Dictionary:
 				var condition_id: int = int(item.get("id", 0))
 				_conditions_by_id[condition_id] = item
 
-	var levels_raw: Variant = _read_json_file(LEVELS_JSON_PATH)
+	var levels_raw: Variant = TableRepo.get_table("levels")
 	if levels_raw is Array:
 		for item in levels_raw:
 			if item is Dictionary:
@@ -60,19 +60,6 @@ func _load_json_data() -> void:
 			_levels_by_chapter_id[chapter_id].sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 				return int(a.get("order", 0)) < int(b.get("order", 0))
 			)
-
-func _read_json_file(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		push_warning("JSON not found: %s" % path)
-		return []
-	var text: String = FileAccess.get_file_as_string(path)
-	if text.is_empty():
-		return []
-	var parsed: Variant = JSON.parse_string(text)
-	if parsed == null:
-		push_warning("JSON parse failed: %s" % path)
-		return []
-	return parsed
 
 func get_all_chapters() -> Array:
 	return _chapters.duplicate(true)

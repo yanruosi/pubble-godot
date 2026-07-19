@@ -1,5 +1,8 @@
-extends Node
+extends "res://scripts/data/save_manager_delegates.gd"
 class_name SaveManager
+
+const _Store = preload("res://scripts/data/save_store.gd")
+const _Migrations = preload("res://scripts/data/save_migrations.gd")
 
 const SAVE_PATH := "user://progress.cfg"
 const SAVE_VERSION := 5
@@ -43,16 +46,11 @@ var hotcount: int = 0
 var activity_first_clear: Dictionary = {}
 var feed_pending: Array = []
 
-## 关卡结算后 change_scene 回主界面时消费；不写盘。
 var pending_post_level_nav: Dictionary = {}
-
 var feed_seen: Dictionary = {}
 var feed_pinned_post_id: String = ""
 var activity_state: Dictionary = {}
-
-## 标题页 → 主界面接力；瞬态，不写盘。"home" / "continue" / ""
 var boot_target: String = ""
-
 var save_version_invalid: bool = false
 
 
@@ -61,203 +59,38 @@ func _init() -> void:
 
 
 func load_progress() -> void:
-	var config := ConfigFile.new()
-	var err := config.load(SAVE_PATH)
+	var config: ConfigFile = _Store.load_config()
+	if config == null:
+		_Migrations.apply_defaults(self)
+		save_progress()
+		return
+	save_version_invalid = not _Migrations.load_into(self, config)
+	if save_version_invalid:
+		save_progress()
+
+
+func save_progress() -> void:
+	var config: ConfigFile = _Store.ensure_config()
+	_Migrations.save_from(self, config)
+	var err: int = _Store.save_config(config)
 	if err != OK:
-		_apply_defaults_after_fresh_save()
-		save_progress()
-		return
-
-	var version: int = int(config.get_value("meta", "save_version", 0))
-	if version < SAVE_VERSION:
-		push_warning("Save version %d < %d; reset required" % [version, SAVE_VERSION])
-		save_version_invalid = true
-		_apply_defaults_after_fresh_save()
-		save_progress()
-		return
-
-	save_version_invalid = false
-	fp = int(config.get_value("player", "fp", 0))
-	intel = int(config.get_value("player", "intel", 0))
-	stars = int(config.get_value("player", "stars", 0))
-	intellevel = int(config.get_value("player", "intellevel", 0))
-	fanlevel = int(config.get_value("player", "fanlevel", 0))
-	stationexp = int(config.get_value("player", "stationexp", 0))
-	tutorialstep = int(config.get_value("player", "tutorialstep", 0))
-	tutorialdone = bool(config.get_value("player", "tutorialdone", false))
-	recent_opened_chapter_id = int(config.get_value("player", "recent_opened_chapter_id", 0))
-	recent_opened_level_id = str(config.get_value("player", "recent_opened_level_id", ""))
-
-	chapter_completed = _as_dict(config.get_value("chapter", "completed", {}))
-	chapter_unlocked = _as_dict(config.get_value("chapter", "unlocked", {}))
-	chapter_new_badge = _as_dict(config.get_value("chapter", "new_badge", {}))
-	level_unlocked = _as_dict(config.get_value("level", "unlocked", {}))
-	level_completed = _as_dict(config.get_value("level", "completed", {}))
-	level_progress = _as_dict(config.get_value("level", "progress", {}))
-	level_hotspot_clicked = _as_dict(config.get_value("level_hotspot", "clicked", {}))
-	inventory = _as_dict(config.get_value("inventory", "items", {}))
-	feed_instances = _normalize_feed_instances(_as_array(config.get_value("instances", "feed", [])))
-	banner_last_offline_ts = int(config.get_value("banner", "last_offline_ts", 0))
-	keypost_progress = int(config.get_value("player", "keypost_progress", 0))
-	keypost_pity = _as_dict(config.get_value("player", "keypost_pity", {}))
-	_instance_id_counter = int(config.get_value("instances", "id_counter", 0))
-	feed_seen = _as_dict(config.get_value("feed", "seen", {}))
-	feed_pinned_post_id = str(config.get_value("feed", "pinned_post_id", ""))
-	activity_state = _as_dict(config.get_value("activity", "state", {}))
-
-	opening_done = bool(config.get_value("player", "opening_done", false))
-	post_counts = _as_dict(config.get_value("player", "post_counts", {}))
-	mypost_queue = _normalize_mypost_queue(_as_array(config.get_value("player", "mypost_queue", [])))
-	favorites = _as_string_array(config.get_value("player", "favorites", []))
-	fans = int(config.get_value("player", "fans", 0))
-	hotcount = int(config.get_value("player", "hotcount", 0))
-	activity_first_clear = _as_dict(config.get_value("player", "activity_first_clear", {}))
-	feed_pending = _normalize_feed_pending(_as_array(config.get_value("player", "feed_pending", [])))
+		push_warning("Save progress failed: %d" % err)
 
 
 func normalize_feed_instances(raw: Array) -> Array:
-	return _normalize_feed_instances(raw)
-
-
-func _normalize_feed_instances(raw: Array) -> Array:
-	var out: Array = []
-	for item in raw:
-		if not (item is Dictionary):
-			continue
-		var inst: Dictionary = (item as Dictionary).duplicate(true)
-		if inst.has("tabsource"):
-			inst["fpcollected"] = bool(inst.get("fpcollected", false))
-			inst["keypostcollected"] = bool(inst.get("keypostcollected", inst.get("intelcollected", false)))
-			inst["fpearned"] = int(inst.get("fpearned", 0))
-			out.append(inst)
-			continue
-		var postid: String = str(inst.get("postid", ""))
-		var tabsource: int = int(inst.get("tabsource", inst.get("tabtype", 903)))
-		var normalized := {
-			"instanceid": str(inst.get("instanceid", "")),
-			"postid": postid,
-			"tabsource": tabsource,
-			"createdat": int(inst.get("createdat", int(Time.get_unix_time_from_system()))),
-			"fpcollected": bool(inst.get("fpcollected", false)),
-			"keypostcollected": bool(inst.get("keypostcollected", inst.get("intelcollected", false))),
-			"fpearned": int(inst.get("fpearned", 0)),
-		}
-		out.append(normalized)
-	return out
-
-
-func _normalize_mypost_queue(raw: Array) -> Array:
-	var out: Array = []
-	for item in raw:
-		if not (item is Dictionary):
-			continue
-		var q: Dictionary = (item as Dictionary).duplicate(true)
-		out.append({
-			"queue_id": str(q.get("queue_id", "")),
-			"mypostid": str(q.get("mypostid", "")),
-			"state": str(q.get("state", "exposing")),
-			"heat": int(q.get("heat", 0)),
-			"hotresult": int(q.get("hotresult", -1)),
-			"expose_start_ts": int(q.get("expose_start_ts", 0)),
-			"expose_end_ts": int(q.get("expose_end_ts", 0)),
-			"idle_fp_earned": int(q.get("idle_fp_earned", 0)),
-			"idle_fans_earned": int(q.get("idle_fans_earned", 0)),
-			"idle_next_ts": int(q.get("idle_next_ts", 0)),
-			"title": str(q.get("title", "")),
-			"is_pinned": bool(q.get("is_pinned", false)),
-		})
-	return out
-
-
-func _normalize_feed_pending(raw: Array) -> Array:
-	## release_ts<=0 且未武装：冷却未开始（等首次进饭圈）
-	## 旧档若只有 release_ts（结算起算）→ 改回未武装，保留剩余秒数作 delay
-	var out: Array = []
-	var now: int = int(Time.get_unix_time_from_system())
-	for item in raw:
-		if not (item is Dictionary):
-			continue
-		var p: Dictionary = item as Dictionary
-		var delay_sec: int = int(p.get("delay_sec", 0))
-		var release_ts: int = int(p.get("release_ts", 0))
-		var cd_armed: bool = bool(p.get("cd_armed", false))
-		if not p.has("cd_armed") and not p.has("delay_sec") and release_ts > 0:
-			delay_sec = maxi(release_ts - now, 1)
-			release_ts = 0
-			cd_armed = false
-		elif p.has("cd_armed"):
-			cd_armed = bool(p.get("cd_armed", false))
-		elif release_ts > 0:
-			cd_armed = true
-		if delay_sec <= 0 and not cd_armed:
-			delay_sec = 2
-		out.append({
-			"postid": str(p.get("postid", "")),
-			"tabsource": int(p.get("tabsource", 903)),
-			"delay_sec": delay_sec,
-			"release_ts": release_ts if cd_armed else 0,
-			"cd_armed": cd_armed,
-		})
-	return out
-
-
-func _as_string_array(v: Variant) -> Array:
-	if not (v is Array):
-		return []
-	var out: Array = []
-	for item in v:
-		out.append(str(item))
-	return out
-
-
-func _apply_defaults_after_fresh_save() -> void:
-	fp = 0
-	intel = 0
-	stars = 0
-	intellevel = 0
-	fanlevel = 0
-	stationexp = 0
-	tutorialstep = 0
-	tutorialdone = true
-	inventory = {}
-	feed_instances = []
-	banner_last_offline_ts = int(Time.get_unix_time_from_system())
-	keypost_progress = 0
-	keypost_pity = {}
-	_instance_id_counter = 0
-	activity_state = {}
-	opening_done = false
-	post_counts = {}
-	mypost_queue = []
-	favorites = []
-	fans = 0
-	hotcount = 0
-	activity_first_clear = {}
-	feed_pending = []
-
-
-func _as_dict(v: Variant) -> Dictionary:
-	if v is Dictionary:
-		return v
-	return {}
-
-
-func _as_array(v: Variant) -> Array:
-	if v is Array:
-		return v
-	return []
+	return _Migrations.normalize_feed_instances(raw)
 
 
 func is_game_started() -> bool:
-	return _get_game_started()
+	return _Store.read_game_started()
 
 
 func mark_game_started() -> void:
-	_set_game_started(true)
+	_Store.write_game_started(true)
 
 
 func can_continue() -> bool:
-	return _get_game_started() and not save_version_invalid
+	return is_game_started() and not save_version_invalid
 
 
 func reset_progress() -> void:
@@ -274,375 +107,9 @@ func reset_progress() -> void:
 	recent_opened_chapter_id = 0
 	recent_opened_level_id = ""
 	pending_post_level_nav.clear()
-	_apply_defaults_after_fresh_save()
+	_Migrations.apply_defaults(self)
 	mark_chapter_unlocked(1, true)
 	chapter_new_badge["1"] = false
 	mark_level_unlocked("ch1_l01", true)
 	save_progress()
-	_set_game_started(true)
-
-
-func _get_game_started() -> bool:
-	var config := ConfigFile.new()
-	if config.load(SAVE_PATH) != OK:
-		return false
-	return bool(config.get_value("player", "game_started", false))
-
-
-func _set_game_started(started: bool) -> void:
-	var config := ConfigFile.new()
-	config.load(SAVE_PATH)
-	config.set_value("player", "game_started", started)
-	config.save(SAVE_PATH)
-
-
-func is_chapter_available(chapter_id: int, chapter_manager: ChapterManager, condition_checker: ConditionChecker) -> bool:
-	if chapter_id <= 0:
-		return false
-	if is_chapter_unlocked(chapter_id):
-		return true
-	if chapter_manager == null or condition_checker == null:
-		return false
-	var chapter: Dictionary = chapter_manager.get_chapter_by_id(chapter_id)
-	if chapter.is_empty():
-		return false
-	var condition_id: int = int(chapter.get("condition_id", 0))
-	if condition_id <= 0:
-		return true
-	return condition_checker.is_condition_met(condition_id)
-
-
-func save_progress() -> void:
-	var config := ConfigFile.new()
-	config.load(SAVE_PATH)
-	config.set_value("meta", "save_version", SAVE_VERSION)
-	config.set_value("player", "fp", fp)
-	config.set_value("player", "intel", intel)
-	config.set_value("player", "stars", stars)
-	config.set_value("player", "intellevel", intellevel)
-	config.set_value("player", "fanlevel", fanlevel)
-	config.set_value("player", "stationexp", stationexp)
-	config.set_value("player", "tutorialstep", tutorialstep)
-	config.set_value("player", "tutorialdone", tutorialdone)
-	config.set_value("player", "keypost_progress", keypost_progress)
-	config.set_value("player", "keypost_pity", keypost_pity)
-	config.set_value("player", "opening_done", opening_done)
-	config.set_value("player", "post_counts", post_counts)
-	config.set_value("player", "mypost_queue", mypost_queue)
-	config.set_value("player", "favorites", favorites)
-	config.set_value("player", "fans", fans)
-	config.set_value("player", "hotcount", hotcount)
-	config.set_value("player", "activity_first_clear", activity_first_clear)
-	config.set_value("player", "feed_pending", feed_pending)
-	config.set_value("player", "recent_opened_chapter_id", recent_opened_chapter_id)
-	config.set_value("player", "recent_opened_level_id", recent_opened_level_id)
-	config.set_value("chapter", "completed", chapter_completed)
-	config.set_value("chapter", "unlocked", chapter_unlocked)
-	config.set_value("chapter", "new_badge", chapter_new_badge)
-	config.set_value("level", "unlocked", level_unlocked)
-	config.set_value("level", "completed", level_completed)
-	config.set_value("level", "progress", level_progress)
-	config.set_value("level_hotspot", "clicked", level_hotspot_clicked)
-	config.set_value("inventory", "items", inventory)
-	config.set_value("instances", "feed", feed_instances)
-	config.set_value("instances", "id_counter", _instance_id_counter)
-	config.set_value("banner", "last_offline_ts", banner_last_offline_ts)
-	config.set_value("feed", "seen", feed_seen)
-	config.set_value("feed", "pinned_post_id", feed_pinned_post_id)
-	config.set_value("activity", "state", activity_state)
-	var err := config.save(SAVE_PATH)
-	if err != OK:
-		push_warning("Save progress failed: %d" % err)
-
-
-func get_currency(category: int) -> int:
-	match category:
-		CAT_FP:
-			return fp
-		CAT_STARS:
-			return stars
-		CAT_INTEL:
-			return intel
-		_:
-			return 0
-
-
-func set_currency(category: int, value: int) -> void:
-	var v: int = max(value, 0)
-	match category:
-		CAT_FP:
-			fp = v
-		CAT_STARS:
-			stars = v
-		CAT_INTEL:
-			intel = v
-
-
-func add_currency(category: int, amount: int) -> void:
-	if amount <= 0:
-		return
-	set_currency(category, get_currency(category) + amount)
-
-
-func consume_currency(category: int, amount: int) -> bool:
-	if amount <= 0:
-		return true
-	if get_currency(category) < amount:
-		return false
-	set_currency(category, get_currency(category) - amount)
-	return true
-
-
-func get_inventory_count(itemid: int) -> int:
-	return int(inventory.get(str(itemid), 0))
-
-
-func set_inventory_count(itemid: int, count: int) -> void:
-	var key := str(itemid)
-	if count <= 0:
-		inventory.erase(key)
-	else:
-		inventory[key] = count
-
-
-func add_inventory_item(itemid: int, count: int = 1) -> void:
-	if count <= 0:
-		return
-	set_inventory_count(itemid, get_inventory_count(itemid) + count)
-
-
-func remove_inventory_item(itemid: int, count: int = 1) -> bool:
-	if count <= 0:
-		return true
-	if get_inventory_count(itemid) < count:
-		return false
-	set_inventory_count(itemid, get_inventory_count(itemid) - count)
-	return true
-
-
-func next_instance_id() -> String:
-	_instance_id_counter += 1
-	return "inst_%d" % _instance_id_counter
-
-
-func next_queue_id() -> String:
-	_instance_id_counter += 1
-	return "q_%d" % _instance_id_counter
-
-
-func is_activity_first_cleared(activityid: String) -> bool:
-	return bool(activity_first_clear.get(activityid, false))
-
-
-func mark_activity_first_cleared(activityid: String) -> void:
-	if activityid.is_empty():
-		return
-	activity_first_clear[activityid] = true
-
-
-func get_post_count(tagid: String) -> int:
-	return int(post_counts.get(tagid, 0))
-
-
-func add_post_count(tagid: String, count: int) -> void:
-	if tagid.is_empty() or count == 0:
-		return
-	post_counts[tagid] = maxi(get_post_count(tagid) + count, 0)
-
-
-func consume_post_count(tagid: String, count: int = 1) -> bool:
-	if tagid.is_empty() or count <= 0:
-		return false
-	if get_post_count(tagid) < count:
-		return false
-	post_counts[tagid] = get_post_count(tagid) - count
-	return true
-
-
-func is_chapter_completed(chapter_id: int) -> bool:
-	return bool(chapter_completed.get(str(chapter_id), false))
-
-
-func mark_chapter_completed(chapter_id: int, completed: bool = true) -> void:
-	chapter_completed[str(chapter_id)] = completed
-	if completed:
-		chapter_unlocked[str(chapter_id)] = true
-		chapter_new_badge[str(chapter_id)] = false
-	save_progress()
-
-
-func is_chapter_unlocked(chapter_id: int) -> bool:
-	return bool(chapter_unlocked.get(str(chapter_id), false))
-
-
-func mark_chapter_unlocked(chapter_id: int, unlocked: bool = true) -> void:
-	chapter_unlocked[str(chapter_id)] = unlocked
-	if unlocked:
-		chapter_new_badge[str(chapter_id)] = true
-	save_progress()
-
-
-func has_chapter_new_badge(chapter_id: int) -> bool:
-	return bool(chapter_new_badge.get(str(chapter_id), false))
-
-
-func mark_chapter_entered(chapter_id: int) -> void:
-	chapter_new_badge[str(chapter_id)] = false
-	recent_opened_chapter_id = chapter_id
-	save_progress()
-
-
-func get_recent_opened_chapter_id() -> int:
-	return recent_opened_chapter_id
-
-
-func set_recent_opened_chapter_id(chapter_id: int) -> void:
-	recent_opened_chapter_id = chapter_id
-	save_progress()
-
-
-func get_recent_opened_level_id() -> String:
-	return recent_opened_level_id
-
-
-func set_recent_opened_level_id(level_id: String) -> void:
-	recent_opened_level_id = level_id
-	save_progress()
-
-
-func is_level_unlocked(level_id: String) -> bool:
-	return bool(level_unlocked.get(level_id, false))
-
-
-func mark_level_unlocked(level_id: String, unlocked: bool = true) -> void:
-	if level_id.is_empty():
-		return
-	level_unlocked[level_id] = unlocked
-	save_progress()
-
-
-func is_level_completed(level_id: String) -> bool:
-	return bool(level_completed.get(level_id, false))
-
-
-func is_hotspot_clicked(level_id: String, hotspot_id: String) -> bool:
-	if level_id.is_empty() or hotspot_id.is_empty():
-		return false
-	var clicked_raw: Variant = level_hotspot_clicked.get(level_id, {})
-	if not (clicked_raw is Dictionary):
-		return false
-	var clicked: Dictionary = clicked_raw
-	return bool(clicked.get(hotspot_id, false))
-
-
-func mark_hotspot_clicked(level_id: String, hotspot_id: String) -> void:
-	if level_id.is_empty() or hotspot_id.is_empty():
-		return
-	var clicked_raw: Variant = level_hotspot_clicked.get(level_id, {})
-	var clicked: Dictionary = {}
-	if clicked_raw is Dictionary:
-		clicked = clicked_raw
-	else:
-		clicked = {}
-	clicked[hotspot_id] = true
-	level_hotspot_clicked[level_id] = clicked
-	save_progress()
-
-
-func set_pending_post_level_nav(data: Dictionary) -> void:
-	pending_post_level_nav = data.duplicate(true)
-
-
-func is_feed_post_seen(post_id: String) -> bool:
-	return bool(feed_seen.get(post_id, false))
-
-
-func mark_feed_post_seen(post_id: String) -> void:
-	if post_id.is_empty():
-		return
-	feed_seen[post_id] = true
-	save_progress()
-
-
-func get_feed_pinned_post_id() -> String:
-	return feed_pinned_post_id
-
-
-func set_feed_pinned_post_id(post_id: String) -> void:
-	feed_pinned_post_id = post_id
-	save_progress()
-
-
-func consume_pending_post_level_nav() -> Dictionary:
-	var copy: Dictionary = pending_post_level_nav.duplicate(true)
-	pending_post_level_nav.clear()
-	return copy
-
-
-func mark_level_completed(level_id: String, completed: bool = true) -> void:
-	if level_id.is_empty():
-		return
-	level_completed[level_id] = completed
-	if completed:
-		level_unlocked[level_id] = true
-	save_progress()
-
-
-func get_level_progress(level_id: String) -> Dictionary:
-	if level_id.is_empty():
-		return {}
-	var raw: Variant = level_progress.get(level_id, {})
-	if raw is Dictionary:
-		return (raw as Dictionary).duplicate(true)
-	return {}
-
-
-func set_level_progress(level_id: String, patch: Dictionary) -> void:
-	if level_id.is_empty() or patch.is_empty():
-		return
-	var current: Dictionary = get_level_progress(level_id)
-	for key in patch.keys():
-		current[key] = patch[key]
-	level_progress[level_id] = current
-
-
-func clear_level_progress(level_id: String) -> void:
-	if level_id.is_empty():
-		return
-	if is_level_completed(level_id):
-		var existing: Dictionary = get_level_progress(level_id)
-		level_progress[level_id] = {
-			"scroll_fills": existing.get("scroll_fills", {}),
-			"identity_fills": existing.get("identity_fills", {}),
-			"slots_completed": existing.get("slots_completed", {}),
-		}
-	else:
-		level_progress.erase(level_id)
-	save_progress()
-
-
-func mark_hotspot_used(level_id: String, hotspot_id: String) -> void:
-	if level_id.is_empty() or hotspot_id.is_empty():
-		return
-	var current: Dictionary = get_level_progress(level_id)
-	var used_raw: Variant = current.get("hotspot_used", [])
-	var used: Array = []
-	if used_raw is Array:
-		used = (used_raw as Array).duplicate()
-	if not used.has(hotspot_id):
-		used.append(hotspot_id)
-	current["hotspot_used"] = used
-	level_progress[level_id] = current
-
-
-func get_activity_state(activityid: String) -> String:
-	if activityid.is_empty():
-		return ""
-	return str(activity_state.get(activityid, ""))
-
-
-func set_activity_state(activityid: String, state: String) -> void:
-	if activityid.is_empty() or state.is_empty():
-		return
-	activity_state[activityid] = state
-	save_progress()
+	mark_game_started()

@@ -121,6 +121,15 @@ func _step_feed_artist() -> void:
 	else:
 		_ok("feed default tab = artist")
 
+	await process_frame
+	await process_frame
+	if feed.has_method("get_artist_visible_count"):
+		var visible_count: int = int(feed.call("get_artist_visible_count"))
+		if visible_count <= 0:
+			_fail("artist tab shows no posts on new game", str(visible_count))
+		else:
+			_ok("artist tab shows ch1 posts count=%d" % visible_count)
+
 	var raw: String = FileAccess.get_file_as_string("res://data/feed_posts.json")
 	var posts: Variant = JSON.parse_string(raw)
 	if posts is Array:

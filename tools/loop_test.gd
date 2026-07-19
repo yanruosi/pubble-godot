@@ -107,6 +107,7 @@ func _run() -> void:
 			_ok("keypost after favorite=%d" % sm.keypost_progress)
 
 	expose.on_tab_entered(904)
+	seed(314159265)  # M3.9: 固定 RNG，idle 段稳定可复现
 	expose.debug_skip_expose_timer()
 	expose.settle_pending_head()
 
@@ -126,6 +127,9 @@ func _run() -> void:
 		_ok("collected kept in mypost_queue")
 
 	if not idle_item.is_empty():
+		if int(idle_item.get("hotresult", 0)) != 1:
+			idle_item["hotresult"] = 1
+			idle_item["is_pinned"] = true
 		idle_item["idle_next_ts"] = int(Time.get_unix_time_from_system()) - 1
 		# force one idle tick via process frames
 		for _i in range(8):

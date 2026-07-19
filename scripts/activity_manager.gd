@@ -29,18 +29,14 @@ func _ready() -> void:
 	_economy_manager = get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
 	_condition_checker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
 	_expose_manager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
-	_activities = _read_json_array(ACTIVITIES_PATH)
-	_templates = _read_json_array(POST_TEMPLATES_PATH)
-	_activity_events = _read_json_array(ACTIVITY_EVENTS_PATH)
+	_activities = _table_array("activities")
+	_templates = _table_array("post_templates")
+	_activity_events = _table_array("activity_events")
 
 
-func _read_json_array(path: String) -> Array:
-	if not FileAccess.file_exists(path):
-		return []
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if parsed is Array:
-		return parsed
-	return []
+func _table_array(name: String) -> Array:
+	var parsed: Variant = TableRepo.get_table(name)
+	return parsed if parsed is Array else []
 
 
 func get_activities() -> Array:
@@ -88,7 +84,7 @@ func _total_keyposts() -> int:
 	if _save_manager == null:
 		return 0
 	var total: int = _save_manager.keypost_progress
-	for row in _read_json_array("res://data/intel_levels.json"):
+	for row in _table_array("intel_levels"):
 		if not (row is Dictionary):
 			continue
 		var lvl: int = int((row as Dictionary).get("level", -1))

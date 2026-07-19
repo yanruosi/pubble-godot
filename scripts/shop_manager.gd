@@ -19,20 +19,16 @@ func _ready() -> void:
 	_economy_manager = get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
 	_inventory_manager = get_node_or_null("/root/InventoryManagerSingleton") as InventoryManager
 	_condition_checker = get_node_or_null("/root/ConditionCheckerSingleton") as ConditionChecker
-	_offers = _read_json_array(SHOP_OFFERS_PATH)
-	for row in _read_json_array(ITEMS_PATH):
+	_offers = _table_array("shop_offers")
+	for row in _table_array("items"):
 		if row is Dictionary:
 			_items_by_id[int(row.get("itemid", 0))] = row
-	_fan_levels = _read_json_array(FAN_LEVELS_PATH)
+	_fan_levels = _table_array("fan_levels")
 
 
-func _read_json_array(path: String) -> Array:
-	if not FileAccess.file_exists(path):
-		return []
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if parsed is Array:
-		return parsed
-	return []
+func _table_array(name: String) -> Array:
+	var parsed: Variant = TableRepo.get_table(name)
+	return parsed if parsed is Array else []
 
 
 func get_offers() -> Array:
