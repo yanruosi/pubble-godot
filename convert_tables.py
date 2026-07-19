@@ -2,7 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 将 data_src 下的配表转为 Godot 使用的 res://data/*.json
-支持：.csv / .xlsx / .xls（同一表基名多格式并存时，取「最近修改」的一个）
+
+源表规范（2026-07-20）：
+  - 工程 data_src/xlsx表/ 与 data_src/levels/{id}/ 只保留 .xlsx
+  - 策划数值草稿在 策划案/…/进度/*.csv，誊入 xlsx 后在本目录转表；勿把 CSV 放进 data_src
+  - 输出仅 data/*.json
+
+读取：优先 .xlsx；若同目录仅有 .csv（遗留误放），会读取但打印 [警告] 建议删除 CSV 只留 xlsx
 
 依赖：pip install pandas openpyxl
 旧版 .xls 另需：pip install xlrd
@@ -658,9 +664,15 @@ def _find_source_file_for_entry(entry: dict[str, Any], directory: str) -> str | 
                     paths.append(p)
             if not paths:
                 continue
+            xlsx_paths = [p for p in paths if p.lower().endswith((".xlsx", ".xlsm", ".xls"))]
+            if xlsx_paths:
+                return max(xlsx_paths, key=lambda p: os.path.getmtime(p))
             csv_path = os.path.join(search_dir, stem + ".csv")
-            if csv_path in paths:
-                return csv_path
+            if csv_path in paths and search_dir == GLOBAL_XLSX_DIR:
+                print(
+                    f"[警告] {csv_path} 不应在 data_src/xlsx表/；"
+                    "策划 CSV 只在 策划案/进度/，工程目录只留 .xlsx"
+                )
             return max(paths, key=lambda p: os.path.getmtime(p))
     return None
 

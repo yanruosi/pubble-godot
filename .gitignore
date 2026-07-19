@@ -47,3 +47,9 @@ venv/
 
 # 工具脚本运行输出（本地测试日志）
 tools/*.txt
+
+# data_src 源表目录只保留 .xlsx；勿提交 CSV 或 Godot 对 CSV 生成的 .import
+data_src/xlsx表/**/*.csv
+data_src/xlsx表/**/*.import
+data_src/levels/**/*.csv
+data_src/levels/**/*.import

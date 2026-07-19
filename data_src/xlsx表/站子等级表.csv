@@ -1,6 +1,0 @@
-﻿level,name,thresholdexp,hotcountgoal,rewardfp,postcapbonus,rewarditemid,rewarditemcount,idolkara,videocallid
-int,string,int,int,int,int,int,int,int,string
-等级,名称,粉丝阈值,热门次数,奖励积分,发帖上限,道具,数量,生咖,影通
-1,百粉草站,100,0,100,1,0,0,0,
-2,五百粉小站,300,2,200,1,0,0,0,
-3,千粉大站,800,4,0,2,0,0,0,

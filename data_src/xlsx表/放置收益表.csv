@@ -1,5 +1,0 @@
-﻿id,intervalmin,intervalmax,fpcap,fanscap
-int,int,int,int,int
-id,间隔秒min,间隔秒max,积分上限,粉丝上限
-1001,8,15,60,30
-1002,20,40,20,10

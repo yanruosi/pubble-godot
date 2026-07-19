@@ -1,7 +1,14 @@
-转换：将表放入本目录后，在项目根目录双击 run_convert.bat（或将 csv/xls/xlsx 拖到 bat 上），会生成 res://data/*.json。
+转换：在项目根目录双击 run_convert.bat（或将 xlsx 拖到 bat 上），会生成 res://data/*.json。
 依赖：pip install -r requirements-convert.txt
 
-所有配表（含 chapters / conditions / levels …）统一下面约定；Excel 另存为 xls/xlsx 时也请保留前三行结构。
+【data_src 目录规范 · 2026-07-20】
+- 工程源表 ONLY：data_src/xlsx表/*.xlsx、data_src/levels/{关卡id}/*.xlsx
+- 禁止在 data_src 下保存/导出/复制 CSV（策划数值草稿用 策划案/…/进度/规则详述.csv、总数值表.csv，誊完写入 xlsx 后转表）
+- 禁止把 策划进度 下的 CSV 复制进 data_src（Godot 会为 CSV 生成 .import 污染目录）
+- 转表输出 ONLY：data/*.json（及 data/levels/{id}/*.json），不要在 data_src 留中间产物
+- 若误生成 CSV/.import：删除后只保留 xlsx，并更新 .gitignore 已忽略上述扩展名
+
+所有配表（含 chapters / conditions / levels …）统一下面约定；Excel 另存为 xlsx 时请保留前三行结构。
 第 1～3 行固定含义（第 4 行起为数据行）：
 第1行：英文字段名（导出 JSON 的 key 建议用这一行）
 第2行：类型提示（string / int / float；仅给人看，convert_tables 不解析本行）
