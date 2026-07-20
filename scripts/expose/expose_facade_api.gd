@@ -69,8 +69,8 @@ func post_mainline(mypostid: String) -> Dictionary:
 	return _ctx.posts.post_mainline(mypostid)
 
 
-func add_heat(actiontype: String) -> bool:
-	return _ctx.heat.add_heat(actiontype)
+func add_heat(actiontype: String, source_key: String = "") -> bool:
+	return _ctx.heat.add_heat(actiontype, source_key)
 
 
 func get_post_display_date(_instanceid: String = "") -> String:
@@ -95,6 +95,14 @@ func get_queue_item(queue_id: String) -> Dictionary:
 
 func toggle_instance_favorite(inst_id: String, favorited: bool) -> bool:
 	return _ctx.instances.toggle_instance_favorite(inst_id, favorited)
+
+
+func apply_wrong_sister_favorite_penalty(inst_id: String) -> bool:
+	return _ctx.instances.apply_wrong_sister_favorite_penalty(inst_id)
+
+
+func bump_instance_display_likes(inst_id: String) -> int:
+	return _ctx.instances.bump_instance_display_likes(inst_id)
 
 
 func toggle_mypost_pin(queue_id: String, pinned: bool) -> bool:

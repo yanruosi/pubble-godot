@@ -46,6 +46,7 @@ func create_item(mypostid: String, pinned: bool) -> Dictionary:
 		"mypostid": mypostid,
 		"state": "exposing",
 		"heat": 0,
+		"heat_sources": [],
 		"hotresult": -1,
 		"posted_ts": now,
 		"expose_start_ts": 0,
@@ -178,7 +179,7 @@ func toggle_pin(queue_id: String, pinned: bool) -> bool:
 		if not is_sticky_item(item):
 			item["is_pinned"] = true
 	else:
-		if is_sticky_item(item):
+		if str(item.get("state", "")) == "exposing":
 			return false
 		if _ctx.save.favorites.has(fav_key):
 			_ctx.save.favorites.erase(fav_key)

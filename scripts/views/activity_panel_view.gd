@@ -4,6 +4,7 @@ class_name ActivityPanelView
 const Defs := preload("res://scripts/views/home_overlay_defs.gd")
 const Ui := preload("res://scripts/views/home_overlay_ui.gd")
 const ActivityBind := preload("res://scripts/views/home_overlay_activity.gd")
+const CurrencyBarView := preload("res://scripts/views/currency_bar_view.gd")
 const _Actions = preload("res://scripts/views/activity_panel_actions.gd")
 const SignPanelViewScript := preload("res://scripts/views/sign_panel_view.gd")
 
@@ -26,6 +27,7 @@ var _next_btn: Button
 var _tab_btns: Array[Button] = []
 var _tab_index: int = Defs.TAB_SHOW
 var _item_index: int = 0
+var _currency_bar: CurrencyBarView
 
 
 func bind_services(
@@ -63,6 +65,8 @@ func build(layer: CanvasLayer) -> void:
 		panel.add_child(bg)
 	else:
 		push_warning("活动底图缺失: %s" % Defs.ACTIVITY_BG_PATH)
+	_currency_bar = CurrencyBarView.new()
+	_currency_bar.build(panel, CurrencyBarView.MODE_PANEL)
 	var close_btn := Ui.make_hit_button(Defs.ACTIVITY_CLOSE, "")
 	close_btn.pressed.connect(func() -> void: panel.visible = false)
 	panel.add_child(close_btn)
@@ -110,6 +114,9 @@ func open() -> void:
 func refresh() -> void:
 	if panel == null:
 		return
+	var sm: SaveManager = panel.get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if _currency_bar != null:
+		_currency_bar.apply(sm)
 	if bool(_is_opening_flow.call()):
 		_tab_index = Defs.TAB_DAILY
 	var list: Array = ActivityBind.activities_for_tab(

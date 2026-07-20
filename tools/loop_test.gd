@@ -80,8 +80,8 @@ func _run() -> void:
 	else:
 		_ok("opening_done=true after first post")
 
-	expose.add_heat("like")
-	expose.add_heat("fav")
+	expose.add_heat("like", "loop_test:like")
+	expose.add_heat("fav", "loop_test:fav")
 	_ok("add_heat like/fav")
 
 	expose.on_tab_entered(0)

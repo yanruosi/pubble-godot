@@ -100,6 +100,16 @@ func bump_reveal_run() -> int:
 func is_reveal_run_current(run_id: int) -> bool:
 	return run_id < 0 or run_id == _reveal_run_id
 
+func get_host() -> Control:
+	return _host
+
+
+func get_list_width() -> float:
+	if _scroll != null:
+		return _scroll.size.x
+	return FeedDefs.P2_LIST_RECT.size.x
+
+
 func play_slide_in_reveal(instance_ids: Array, run_id: int, on_done: Callable) -> void:
 	if not is_reveal_run_current(run_id) or _list_box == null or instance_ids.is_empty():
 		return
@@ -132,6 +142,29 @@ func play_slide_in_reveal(instance_ids: Array, run_id: int, on_done: Callable) -
 		await _host.get_tree().create_timer(float(order - 1) * 0.32 + 0.38).timeout
 		if is_reveal_run_current(run_id) and on_done.is_valid():
 			on_done.call()
+
+
+func play_mypost_slide_in(queue_id: String) -> void:
+	if _list_box == null or queue_id.is_empty() or _host == null:
+		return
+	if _scroll:
+		_scroll.scroll_vertical = 0
+		_scroll.clip_contents = true
+	for child in _list_box.get_children():
+		if not (child is Node):
+			continue
+		if str((child as Node).get_meta("queue_id", "")) != queue_id:
+			continue
+		if not (child is Control):
+			return
+		var card := child as Control
+		var slide_h := _Reveal.slide_height(card)
+		_Reveal.wrap_card_for_slide(card, slide_h)
+		card.position = Vector2(0.0, -slide_h)
+		var tw := _host.create_tween()
+		tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(card, "position:y", 0.0, 0.36)
+		return
 
 func play_heart_effect(anchor: Node, anchor_global: Vector2 = Vector2.ZERO) -> void:
 	var pos := anchor_global

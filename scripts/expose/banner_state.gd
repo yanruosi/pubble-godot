@@ -94,6 +94,7 @@ func get_snapshot() -> Dictionary:
 		source = display
 
 	var remaining := -1.0
+	var expose_total := 150.0
 	var heat := 0
 	var heat_bonus := 0
 	var idle_fp := 0
@@ -119,6 +120,8 @@ func get_snapshot() -> Dictionary:
 				settle_fp += int(def_fb.get("hotbonusfp", 0))
 		if banner_state == ExposeManager.BANNER_EXPOSING:
 			remaining = queue.remaining_expose_sec(source)
+			var def_ex: Dictionary = _ctx.my_posts_by_id.get(mypostid, {})
+			expose_total = maxf(float(def_ex.get("exposesec", 150)), 1.0)
 		elif banner_state == ExposeManager.BANNER_HOT_SUCCESS:
 			idle_fp = int(source.get("idle_fp_earned", 0))
 			idle_fans = int(source.get("idle_fans_earned", 0))
@@ -127,15 +130,20 @@ func get_snapshot() -> Dictionary:
 	var display_fans: int = settle_fans + idle_fans
 	var save: SaveManager = _ctx.save
 	var kp: Dictionary = _ctx.keypost_display()
+	var next_artist := ""
+	if _ctx.posts != null and _ctx.posts.has_method("get_next_unlock_artist_title"):
+		next_artist = str(_ctx.posts.call("get_next_unlock_artist_title"))
 	return {
 		"banner_state": banner_state,
 		"intellevel": save.intellevel if save != null else 0,
 		"keypost_current": kp.get("current", 0),
 		"keypost_target": kp.get("target", 0),
+		"next_artist_title": next_artist,
 		"heat": heat,
 		"heat_bonus_rate": heat_bonus,
 		"heat_max": 50,
 		"remaining_sec": remaining,
+		"expose_total_sec": expose_total,
 		"idle_fp_earned": idle_fp,
 		"idle_fans_earned": idle_fans,
 		"settle_fp": settle_fp,
@@ -146,6 +154,7 @@ func get_snapshot() -> Dictionary:
 		"is_pinned": is_pinned,
 		"mypostid": mypostid,
 		"fans": save.fans if save != null else 0,
+		"fp": save.fp if save != null else 0,
 		"hotcount": save.hotcount if save != null else 0,
 		"fanlevel": save.fanlevel if save != null else 0,
 		"has_my_post": not display.is_empty() or not exposing.is_empty(),

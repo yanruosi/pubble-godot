@@ -156,7 +156,7 @@ func toggle_instance_favorite(inst_id: String, favorited: bool) -> bool:
 	var postclass: int = resolve_postclass(tpl)
 	if postclass == ExposeManager.POSTCLASS_KEY:
 		return favorited and favorite_instance(inst_id)
-	if postclass not in [ExposeManager.POSTCLASS_NORMAL, ExposeManager.POSTCLASS_ADVANCED]:
+	if postclass not in [ExposeManager.POSTCLASS_NORMAL, ExposeManager.POSTCLASS_ADVANCED, ExposeManager.POSTCLASS_MAINLINE]:
 		return false
 	if favorited:
 		if _ctx.save.favorites.has(inst_id):
@@ -175,6 +175,37 @@ func is_instance_favorited(inst_id: String) -> bool:
 	if _ctx.save == null or inst_id.is_empty():
 		return false
 	return _ctx.save.favorites.has(inst_id)
+
+
+func bump_instance_display_likes(inst_id: String) -> int:
+	if _ctx.save == null or inst_id.is_empty():
+		return 0
+	var inst: Dictionary = find_feed_instance(inst_id)
+	if inst.is_empty():
+		return 0
+	var count: int = int(inst.get("display_likes", 0)) + 1
+	inst["display_likes"] = count
+	_ctx.save.save_progress()
+	return count
+
+
+func apply_wrong_sister_favorite_penalty(inst_id: String) -> bool:
+	if _ctx.save == null or inst_id.is_empty() or _ctx.save.favorites.has(inst_id):
+		return false
+	var inst: Dictionary = find_feed_instance(inst_id)
+	if inst.is_empty():
+		return false
+	var tpl: Dictionary = _templates_by_id.get(str(inst.get("postid", "")), {})
+	if int(tpl.get("tabtype", 0)) != ExposeManager.TAB_SISTER:
+		return false
+	if resolve_postclass(tpl) == ExposeManager.POSTCLASS_KEY:
+		return false
+	_ctx.save.fans = maxi(0, _ctx.save.fans - 10)
+	_ctx.save.save_progress()
+	if _ctx.economy != null and _ctx.economy.has_method("notify_balance_updated"):
+		_ctx.economy.notify_balance_updated(-1)
+	_ctx.host.instance_changed.emit()
+	return true
 
 
 func try_collect_instance(instance_id: String, tabtype: int) -> bool:

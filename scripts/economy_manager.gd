@@ -1,6 +1,8 @@
 extends Node
 class_name EconomyManager
 
+signal balance_updated(grant_type: int)
+
 const INTEL_LEVELS_PATH := "res://data/intel_levels.json"
 const FAN_LEVELS_PATH := "res://data/fan_levels.json"
 const STATION_LEVELS_PATH := "res://data/station_levels.json"
@@ -39,11 +41,16 @@ func _table_array(name: String) -> Array:
 	return parsed if parsed is Array else []
 
 
+func notify_balance_updated(grant_type: int = -1) -> void:
+	balance_updated.emit(grant_type)
+
+
 func add_currency(type: int, amount: int, _reason: String = "") -> void:
 	if _save_manager == null or amount <= 0:
 		return
 	_save_manager.add_currency(type, amount)
 	_save_manager.save_progress()
+	notify_balance_updated(type)
 
 
 func consume_currency(type: int, amount: int, _reason: String = "") -> bool:
@@ -52,6 +59,7 @@ func consume_currency(type: int, amount: int, _reason: String = "") -> bool:
 	if not _save_manager.consume_currency(type, amount):
 		return false
 	_save_manager.save_progress()
+	notify_balance_updated(type)
 	return true
 
 
@@ -100,6 +108,7 @@ func try_upgrade_intel() -> bool:
 	if int(row.get("grantstars", 0)) > 0:
 		_save_manager.add_currency(CAT_STARS, int(row.get("grantstars", 0)))
 	_save_manager.save_progress()
+	notify_balance_updated(-1)
 	return true
 
 
@@ -130,6 +139,7 @@ func try_upgrade_station() -> bool:
 	if int(row.get("rewardfp", 0)) > 0:
 		_save_manager.add_currency(CAT_FP, int(row.get("rewardfp", 0)))
 	_save_manager.save_progress()
+	notify_balance_updated(CAT_FP)
 	return true
 
 
@@ -150,6 +160,7 @@ func try_upgrade_fan() -> bool:
 	_consume_inventory_by_category(need_cat, need_count)
 	_save_manager.fanlevel = next_level
 	_save_manager.save_progress()
+	notify_balance_updated(-1)
 	var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 	if tutor != null:
 		tutor.notify_fan_upgraded()

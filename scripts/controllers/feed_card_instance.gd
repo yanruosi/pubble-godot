@@ -1,6 +1,7 @@
 extends RefCounted
 
 const FeedDefs := preload("res://scripts/views/feed_defs.gd")
+const FeedCardEffects := preload("res://scripts/views/feed_card_effects.gd")
 
 var _ctrl
 
@@ -26,18 +27,28 @@ func bind_mypost_like(card: Node, expose: ExposeManager) -> void:
 	if not card.has_signal("like_pressed"):
 		return
 	card.like_pressed.connect(func(anchor_global: Vector2) -> void:
-		if expose.has_method("add_heat"):
-			expose.add_heat("like")
+		if card.has_method("bump_display_likes"):
+			card.call("bump_display_likes")
 		_ctrl._list.play_heart_effect(card, anchor_global)
 		_ctrl.sync_banner_snapshot()
 	)
 
 
-func on_instance_like_pressed(inst: Dictionary, _tpl: Dictionary, card: Node, anchor_global: Vector2) -> void:
+func on_instance_like_pressed(inst: Dictionary, tpl: Dictionary, card: Node, anchor_global: Vector2) -> void:
 	var expose: ExposeManager = _ctrl._expose()
-	if expose != null and expose.has_method("add_heat"):
-		expose.add_heat("like")
-	_ctrl._list.play_heart_effect(card, anchor_global)
+	var iid: String = str(inst.get("instanceid", ""))
+	if expose != null and expose.has_method("add_heat") and not iid.is_empty():
+		expose.add_heat("like", iid)
+	if expose != null and expose.has_method("bump_instance_display_likes") and not iid.is_empty():
+		var count: int = int(expose.bump_instance_display_likes(iid))
+		inst["display_likes"] = count
+		if card != null and card.has_method("setup"):
+			var view: Dictionary = _ctrl._vm.instance_card_view_dict(inst, tpl, true)
+			card.call("setup", view)
+	elif card != null and card.has_method("bump_display_likes"):
+		card.call("bump_display_likes")
+	var postclass: int = resolve_tpl_postclass(tpl)
+	FeedCardEffects.play_like(_ctrl._list, card, anchor_global, postclass)
 	_ctrl.sync_banner_snapshot()
 
 
@@ -54,9 +65,12 @@ func on_instance_fav_pressed(inst: Dictionary, tpl: Dictionary, card: Node, favo
 	if expose == null:
 		return
 	var iid: String = str(inst.get("instanceid", ""))
-	if expose.has_method("add_heat") and favorited:
-		expose.add_heat("fav")
 	var postclass: int = resolve_tpl_postclass(tpl)
+	if favorited and expose.has_method("apply_wrong_sister_favorite_penalty"):
+		if expose.apply_wrong_sister_favorite_penalty(iid):
+			_ctrl.show_toast("当前收藏的帖子引起争议 粉丝-10")
+	if favorited and expose.has_method("add_heat") and not iid.is_empty():
+		expose.add_heat("fav", iid)
 	var ok := false
 	if expose.has_method("toggle_instance_favorite"):
 		ok = bool(expose.toggle_instance_favorite(iid, favorited))
@@ -65,14 +79,16 @@ func on_instance_fav_pressed(inst: Dictionary, tpl: Dictionary, card: Node, favo
 	if card.has_method("set_pinned"):
 		card.call("set_pinned", favorited and ok)
 	if postclass == 3 and favorited and ok:
-		var sm: SaveManager = _ctrl._save()
-		if sm != null:
-			var target: int = 0
-			var eco: EconomyManager = _ctrl._page.get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
-			if eco != null:
-				target = eco.get_keypost_target()
-			if target > 0:
-				_ctrl.show_toast("找到关键线索帖 %d/%d" % [sm.keypost_progress, target])
+		var msg := "收集关键艺人粉丝投稿+1"
+		if expose.has_method("get_keypost_display"):
+			var kp: Dictionary = expose.get_keypost_display()
+			var cur: int = int(kp.get("current", 0))
+			var tgt: int = int(kp.get("target", 0))
+			if tgt > 0 and cur >= tgt:
+				msg = "收集关键艺人粉丝投稿+1 已收集全部%d个艺人粉丝投稿" % tgt
+			elif tgt > 0:
+				msg = "收集关键艺人粉丝投稿+1 还需收集%d个" % maxi(tgt - cur, 0)
+		_ctrl.show_toast(msg)
 	if ok and not favorited:
 		_ctrl.refresh_feed()
 	_ctrl.sync_banner_snapshot()

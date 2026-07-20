@@ -50,7 +50,8 @@ func refresh_instance_tab(tabtype: int) -> void:
 		refresh_account_mypost_list(expose)
 		return
 	if tabtype == FeedDefs.TABTYPE_FANDOM:
-		append_fandom_pinned_myposts(expose)
+		refresh_fandom_merged_feed(expose)
+		return
 	var list_width := _ctrl._ui.get_active_list_rect().size.x
 	for inst in expose.get_instances_for_tab(tabtype):
 		if not (inst is Dictionary):
@@ -87,27 +88,30 @@ func refresh_account_mypost_list(expose: ExposeManager) -> void:
 			"queue_id": str(item.get("queue_id", "")),
 			"mypostid": mypostid,
 		})
-		_ctrl._actions.bind_mypost_like(card, expose)
-		_ctrl._actions.connect_mypost_card_signals(card, item, expose)
 	if _ctrl._list.list_box.get_child_count() == 0:
 		_cards.add_empty_tip("暂无我的帖子，选择标签发布")
 
 
-func append_fandom_pinned_myposts(expose: ExposeManager) -> int:
-	var queue: Array = expose.get_mypost_queue().duplicate()
-	queue.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return _ctrl._vm.mypost_sort_before(a, b)
-	)
-	var shown := 0
-	for item_raw in queue:
-		if not (item_raw is Dictionary):
+func refresh_fandom_merged_feed(expose: ExposeManager) -> void:
+	var list_width := _ctrl._ui.get_active_list_rect().size.x
+	for entry_raw in _ctrl._vm.build_fandom_feed_plan(expose):
+		if not (entry_raw is Dictionary):
 			continue
-		var item: Dictionary = item_raw as Dictionary
-		var state: String = str(item.get("state", ""))
-		if state != "exposing" and state != "collected":
+		var entry: Dictionary = entry_raw as Dictionary
+		if str(entry.get("kind", "")) == "mypost":
+			var item: Dictionary = entry.get("item", {})
+			add_mypost_card_to_parent(item, expose, _ctrl._vm.is_sticky_mypost(item))
 			continue
-		shown += add_mypost_card_to_parent(item, expose, _ctrl._vm.is_sticky_mypost(item))
-	return shown
+		var inst: Dictionary = entry.get("inst", {})
+		var tpl: Dictionary = expose.get_template(str(inst.get("postid", "")))
+		var card: Node = _cards.mount_card(
+			_ctrl._vm.instance_card_view_dict(inst, tpl, true),
+			list_width,
+			{"instance_id": str(inst.get("instanceid", ""))}
+		)
+		_ctrl._actions.bind_instance_card(card, inst, tpl)
+	if _ctrl._list.list_box.get_child_count() == 0:
+		_cards.add_empty_tip("暂无帖子，下拉刷新试试")
 
 
 func add_mypost_card_to_parent(item: Dictionary, expose: ExposeManager, _is_sticky: bool) -> int:

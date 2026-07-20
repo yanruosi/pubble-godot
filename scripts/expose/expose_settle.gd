@@ -26,6 +26,8 @@ func settle_item(item: Dictionary) -> void:
 	econ.add_currency(SaveManager.CAT_FP, fp_grant, "expose_settle")
 	save.fans += fans_grant
 	_ctx.check_station_level_up()
+	if econ.has_method("notify_balance_updated"):
+		econ.notify_balance_updated(SaveManager.CAT_FP)
 	item["state"] = "collected"
 	item["settle_fp"] = fp_grant
 	item["settle_fans"] = fans_grant

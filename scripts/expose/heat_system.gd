@@ -19,12 +19,18 @@ func load_tables() -> void:
 	_hot_rates = TableRepo.get_table("hot_rates")
 
 
-func add_heat(actiontype: String) -> bool:
+func add_heat(actiontype: String, source_key: String = "") -> bool:
 	if _ctx.save == null:
 		return false
 	var head: Dictionary = _ctx.queue.get_exposing_item()
 	if head.is_empty() or str(head.get("state", "")) != "exposing":
 		return false
+	if not source_key.is_empty():
+		var sources: Array = head.get("heat_sources", [])
+		if source_key in sources:
+			return false
+		sources.append(source_key)
+		head["heat_sources"] = sources
 	var action: Dictionary = _heat_actions.get(actiontype, {})
 	if action.is_empty():
 		return false

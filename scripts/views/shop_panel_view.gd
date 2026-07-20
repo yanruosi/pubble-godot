@@ -3,6 +3,7 @@ class_name ShopPanelView
 
 const Defs := preload("res://scripts/views/home_overlay_defs.gd")
 const Ui := preload("res://scripts/views/home_overlay_ui.gd")
+const CurrencyBarView := preload("res://scripts/views/currency_bar_view.gd")
 
 var panel: Control
 
@@ -18,6 +19,7 @@ var _slot_price: Array[Label] = []
 var _slot_desc: Array[Label] = []
 var _slot_icon: Array[TextureRect] = []
 var _slot_offer_ids: Array[int] = [-1, -1]
+var _currency_bar: CurrencyBarView
 
 
 func bind_services(economy: EconomyManager, shop: ShopManager) -> void:
@@ -44,6 +46,8 @@ func build(layer: CanvasLayer) -> void:
 		panel.add_child(bg)
 	else:
 		push_warning("商店底图缺失: %s" % Defs.SHOP_BG_PATH)
+	_currency_bar = CurrencyBarView.new()
+	_currency_bar.build(panel, CurrencyBarView.MODE_PANEL)
 	_upgrade_btn = Ui.make_hit_button(Defs.SHOP_P1_UPGRADE, "升级")
 	_upgrade_btn.pressed.connect(_on_upgrade_fan_pressed)
 	panel.add_child(_upgrade_btn)
@@ -96,6 +100,9 @@ func open() -> void:
 func refresh() -> void:
 	if _shop == null or panel == null:
 		return
+	var sm: SaveManager = panel.get_node_or_null("/root/SaveManagerSingleton") as SaveManager
+	if _currency_bar != null:
+		_currency_bar.apply(sm)
 	_refresh_member_labels()
 	_refresh_offer_slots()
 

@@ -10,6 +10,7 @@ const FeedUiBuild := preload("res://scripts/controllers/feed_ui_build.gd")
 const FeedListVm := preload("res://scripts/controllers/feed_list_vm.gd")
 const FeedTabRefresh := preload("res://scripts/controllers/feed_tab_refresh.gd")
 const FeedCardActions := preload("res://scripts/controllers/feed_card_actions.gd")
+const CurrencyBarView := preload("res://scripts/views/currency_bar_view.gd")
 const _Nodes = preload("res://scripts/controllers/feed_controller_nodes.gd")
 
 var _page: Control
@@ -24,9 +25,7 @@ var _tab_bar: FeedTabBarView
 var _banner: FeedBannerView
 var _list: FeedListView
 var _composer: PostComposerView
-var _fp_label: Label
-var _stars_label: Label
-var _intel_level_label: Label
+var _currency_bar: CurrencyBarView
 var _toast_label: Label
 var _bag_panel: PanelContainer
 var _bag_grid: GridContainer
@@ -102,6 +101,11 @@ func get_active_tab() -> String:
 func count_artist_posts() -> int:
 	return _vm.collect_artist_enriched().size()
 
+
+func build_favorites_vm() -> Array:
+	return _vm.build_favorites_vm()
+
+
 func process_banner_tick() -> void:
 	if _banner.shows_dynamic_overlay(_active_tab):
 		sync_banner_snapshot()
@@ -137,7 +141,7 @@ func play_pending_reveals(tabtype: int, run_id: int = -1) -> void:
 func refresh_banner_area() -> void:
 	var expose: ExposeManager = _expose()
 	_banner.relayout(_active_tab, _ui.get_active_banner_rect())
-	if _active_tab in [FeedDefs.TAB_FANDOM, FeedDefs.TAB_SISTER, FeedDefs.TAB_ACCOUNT]:
+	if _active_tab in [FeedDefs.TAB_FANDOM, FeedDefs.TAB_SISTER, FeedDefs.TAB_ACCOUNT, FeedDefs.TAB_FAVORITES]:
 		sync_banner_snapshot()
 	_banner.refresh_tab(_active_tab, func() -> bool:
 		return expose != null and expose.consume_pending_intel_level_up()
@@ -145,26 +149,42 @@ func refresh_banner_area() -> void:
 
 func sync_banner_snapshot() -> void:
 	var expose: ExposeManager = _expose()
-	if expose != null:
-		_banner.apply_snapshot(expose.get_banner_snapshot())
+	if expose == null:
+		return
+	var snap: Dictionary = expose.get_banner_snapshot()
+	_banner.apply_snapshot(snap)
 
 func refresh_compose_area() -> void:
 	if _active_tab != FeedDefs.TAB_ACCOUNT:
 		return
 	var expose: ExposeManager = _expose()
-	if expose != null:
-		_composer.refresh_tags(expose.get_post_tags(), expose)
+	var sm: SaveManager = _save()
+	if expose == null or sm == null:
+		return
+	var tags: Array = []
+	for row in TableRepo.get_table("post_tags"):
+		if not (row is Dictionary):
+			continue
+		var tag: Dictionary = row as Dictionary
+		var tagid: String = str(tag.get("tagid", ""))
+		if tagid.is_empty():
+			continue
+		tags.append({
+			"tagid": tagid,
+			"name": str(tag.get("name", tagid)),
+			"count": sm.get_post_count(tagid),
+		})
+	_composer.refresh_tags(tags, expose)
 
-func update_currency_hud() -> void:
+func update_currency_hud(pulse_fp: bool = false) -> void:
+	if not is_instance_valid(_page) or _currency_bar == null:
+		return
 	var sm: SaveManager = _save()
 	if sm == null:
 		return
-	if _fp_label != null:
-		_fp_label.text = "饭圈积分 %d" % sm.fp
-	if _stars_label != null:
-		_stars_label.text = "星星 %d" % sm.stars
-	if _intel_level_label != null:
-		_intel_level_label.text = "线索 Lv.%d" % sm.intellevel
+	_currency_bar.apply(sm)
+	if pulse_fp and is_instance_valid(_page):
+		_currency_bar.pulse_fp(_page)
 
 func show_toast(msg: String) -> void:
 	if _toast_label == null:
@@ -182,6 +202,9 @@ func show_toast(msg: String) -> void:
 func _wire_signals() -> void:
 	_tab_bar.tab_selected.connect(set_active_tab)
 	_composer.publish_requested.connect(_actions.on_publish_requested)
+	_composer.tag_blocked.connect(func(_tagid: String) -> void:
+		show_toast("去参加线下活动获得次数")
+	)
 	_banner.market_bag_pressed.connect(_actions.on_market_bag_pressed)
 	_list.scrolled_down.connect(_tabs.on_list_scrolled_down)
 	var expose: ExposeManager = _expose()
@@ -195,6 +218,28 @@ func _wire_signals() -> void:
 		expose.intel_level_up.connect(_tabs.on_intel_level_up)
 	if not expose.instance_changed.is_connected(_on_instance_changed):
 		expose.instance_changed.connect(_on_instance_changed)
+	if not expose.lump_granted.is_connected(_on_hud_lump_granted):
+		expose.lump_granted.connect(_on_hud_lump_granted)
+	if not expose.intel_level_up.is_connected(_on_hud_intel_level_up):
+		expose.intel_level_up.connect(_on_hud_intel_level_up)
+	if not expose.keypost_favorited.is_connected(_on_hud_keypost_favorited):
+		expose.keypost_favorited.connect(_on_hud_keypost_favorited)
+	var economy: EconomyManager = _page.get_node_or_null("/root/EconomyManagerSingleton") as EconomyManager
+	if economy != null and not economy.balance_updated.is_connected(_on_economy_balance_updated):
+		economy.balance_updated.connect(_on_economy_balance_updated)
+
+
+func _on_economy_balance_updated(grant_type: int) -> void:
+	update_currency_hud(grant_type == SaveManager.CAT_FP)
+
+func _on_hud_lump_granted(_tabtype: int, grant_type: int, _amount: int) -> void:
+	update_currency_hud(grant_type == SaveManager.CAT_FP)
+
+func _on_hud_intel_level_up(_new_level: int) -> void:
+	update_currency_hud()
+
+func _on_hud_keypost_favorited(_instance_id: String) -> void:
+	update_currency_hud()
 
 func _on_instance_changed() -> void:
 	if not is_instance_valid(_page):

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const FeedDefs := preload("res://scripts/views/feed_defs.gd")
+const CurrencyBarView := preload("res://scripts/views/currency_bar_view.gd")
 const _Hotsearch = preload("res://scripts/controllers/feed_ui_hotsearch.gd")
 
 var _ctrl: FeedController
@@ -47,11 +48,14 @@ func build_ui() -> void:
 		_ctrl._content_root.add_child(back_btn)
 	build_hud()
 	_Hotsearch.build(_ctrl)
-	_ctrl._tab_bar.build(_ctrl._content_root)
-	_ctrl._composer.build(_ctrl._content_root)
 	build_bag_panel()
 	_ctrl._banner.build(_ctrl._content_root)
 	_ctrl._list.build(_ctrl._content_root, get_active_list_rect())
+	_ctrl._composer.build(_ctrl._content_root)
+	_ctrl._tab_bar.build(_ctrl._content_root)
+	if _ctrl._tab_bar.root != null:
+		_ctrl._tab_bar.root.z_index = 30
+		_ctrl._tab_bar.root.mouse_filter = Control.MOUSE_FILTER_STOP
 	_ctrl._toast_label = Label.new()
 	_ctrl._toast_label.visible = false
 	_ctrl._toast_label.z_index = 100
@@ -61,18 +65,8 @@ func build_ui() -> void:
 
 
 func build_hud() -> void:
-	_ctrl._fp_label = Label.new()
-	_ctrl._fp_label.position = Vector2(900, 8)
-	_ctrl._fp_label.add_theme_font_size_override("font_size", 14)
-	_ctrl._content_root.add_child(_ctrl._fp_label)
-	_ctrl._stars_label = Label.new()
-	_ctrl._stars_label.position = Vector2(900, 28)
-	_ctrl._stars_label.add_theme_font_size_override("font_size", 14)
-	_ctrl._content_root.add_child(_ctrl._stars_label)
-	_ctrl._intel_level_label = Label.new()
-	_ctrl._intel_level_label.position = Vector2(1039, 8)
-	_ctrl._intel_level_label.add_theme_font_size_override("font_size", 21)
-	_ctrl._content_root.add_child(_ctrl._intel_level_label)
+	_ctrl._currency_bar = CurrencyBarView.new()
+	_ctrl._currency_bar.build(_ctrl._content_root, CurrencyBarView.MODE_FEED)
 
 
 func build_bag_panel() -> void:
@@ -131,10 +125,8 @@ func get_active_banner_rect() -> Rect2:
 			return FeedDefs.P3_BANNER_RECT
 		FeedDefs.TAB_ACCOUNT:
 			return FeedDefs.P4_BANNER_RECT
-		FeedDefs.TAB_FANDOM, FeedDefs.TAB_SISTER:
+		FeedDefs.TAB_FANDOM, FeedDefs.TAB_SISTER, FeedDefs.TAB_FAVORITES:
 			return FeedDefs.P1_BANNER_RECT
-		FeedDefs.TAB_FAVORITES:
-			return Rect2(FeedDefs.P1_BANNER_RECT.position, Vector2(FeedDefs.P1_BANNER_RECT.size.x, 0))
 		_:
 			return FeedDefs.P1_BANNER_RECT
 
@@ -146,7 +138,7 @@ func get_active_list_rect() -> Rect2:
 		FeedDefs.TAB_ACCOUNT:
 			return FeedDefs.P5_LIST_RECT
 		FeedDefs.TAB_FAVORITES:
-			return Rect2(FeedDefs.P1_BANNER_RECT.position, Vector2(FeedDefs.P2_LIST_RECT.size.x, FeedDefs.P1_BANNER_RECT.size.y + FeedDefs.P2_LIST_RECT.size.y))
+			return FeedDefs.P2_LIST_RECT
 		FeedDefs.TAB_FANDOM, FeedDefs.TAB_SISTER, FeedDefs.TAB_MARKET:
 			return FeedDefs.P2_LIST_RECT
 		_:

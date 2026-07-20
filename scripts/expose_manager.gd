@@ -7,6 +7,7 @@ const TAB_ACCOUNT := 904
 const POSTCLASS_NORMAL := 1
 const POSTCLASS_ADVANCED := 2
 const POSTCLASS_KEY := 3
+const POSTCLASS_MAINLINE := 4
 const FAVORITE_MYPOST_PREFIX := "mypost:"
 const BANNER_EXPOSING := "exposing"
 const BANNER_HOT_SUCCESS := "hot_success"

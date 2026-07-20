@@ -5,6 +5,8 @@
 - 工程源表 ONLY：data_src/xlsx表/*.xlsx、data_src/levels/{关卡id}/*.xlsx
 - 禁止在 data_src 下保存/导出/复制 CSV（策划数值草稿用 策划案/…/进度/规则详述.csv、总数值表.csv，誊完写入 xlsx 后转表）
 - 禁止把 策划进度 下的 CSV 复制进 data_src（Godot 会为 CSV 生成 .import 污染目录）
+- xlsx表/ 与 levels/ 已放置 .gdignore：Godot 编辑器不会导入该目录，避免生成 .translation
+- 运行 convert_tables.py / run_convert.bat 会在转表前后自动删除上述目录内除 .xlsx/.xls/.xlsm 外的文件
 - 转表输出 ONLY：data/*.json（及 data/levels/{id}/*.json），不要在 data_src 留中间产物
 - 若误生成 CSV/.import：删除后只保留 xlsx，并更新 .gitignore 已忽略上述扩展名
 

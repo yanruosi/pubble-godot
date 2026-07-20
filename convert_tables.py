@@ -375,6 +375,9 @@ for _entry in TABLES:
 
 # 单关配表：data_src/levels/{level_id}/*.csv -> data/levels/{level_id}/*.json
 LEVELS_PACK_SRC = os.path.join(SRC_DIR, "levels")
+
+# data_src 源表目录允许的后缀（其余文件会在转表前后自动清理）
+_DATA_SRC_KEEP_EXTS = {".xlsx", ".xlsm", ".xls"}
 LEVELS_PACK_OUT = os.path.join(OUT_DIR, "levels")
 
 LEVEL_PACK_TABLES = [
@@ -811,8 +814,43 @@ def convert_path(arg_path: str) -> bool:
     return convert_one_entry(entry, src_path=path)
 
 
+def _purge_non_xlsx_under(directory: str) -> int:
+    """删除 data_src 源表目录中非 xlsx 的遗留文件（CSV / .import / .translation 等）。"""
+    if not os.path.isdir(directory):
+        return 0
+    removed = 0
+    for root, _dirs, files in os.walk(directory):
+        for name in files:
+            if name == ".gdignore":
+                continue
+            ext = os.path.splitext(name)[1].lower()
+            if ext in _DATA_SRC_KEEP_EXTS:
+                continue
+            path = os.path.join(root, name)
+            try:
+                os.remove(path)
+                removed += 1
+                print(f"[清理] {os.path.relpath(path, SCRIPT_DIR)}")
+            except OSError as exc:
+                print(f"[警告] 无法删除 {path}: {exc}")
+    return removed
+
+
+def purge_data_src_artifacts() -> int:
+    """清理 xlsx表/ 与 levels/ 下除 .xlsx 外的所有文件。"""
+    total = 0
+    if os.path.isdir(GLOBAL_XLSX_DIR):
+        total += _purge_non_xlsx_under(GLOBAL_XLSX_DIR)
+    if os.path.isdir(LEVELS_PACK_SRC):
+        total += _purge_non_xlsx_under(LEVELS_PACK_SRC)
+    if total:
+        print(f"[清理] 共删除 {total} 个非 xlsx 文件")
+    return total
+
+
 def main() -> None:
     _ensure_dirs()
+    purge_data_src_artifacts()
     argv = [a for a in sys.argv[1:] if a.strip()]
 
     if argv:
@@ -820,6 +858,7 @@ def main() -> None:
         for a in argv:
             if convert_path(a):
                 ok += 1
+        purge_data_src_artifacts()
         print(f"指定文件处理完毕：成功 {ok}/{len(argv)}")
         return
 
@@ -832,6 +871,7 @@ def main() -> None:
     pack_total, pack_ok = convert_level_packs()
     total += pack_total
     ok += pack_ok
+    purge_data_src_artifacts()
     print(f"全部处理结束：成功 {ok}/{total}")
 
 

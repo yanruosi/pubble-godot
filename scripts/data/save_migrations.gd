@@ -90,6 +90,7 @@ static func normalize_mypost_queue(raw: Array) -> Array:
 			"mypostid": str(q.get("mypostid", "")),
 			"state": str(q.get("state", "exposing")),
 			"heat": int(q.get("heat", 0)),
+			"heat_sources": _as_string_array(q.get("heat_sources", [])),
 			"hotresult": int(q.get("hotresult", -1)),
 			"expose_start_ts": int(q.get("expose_start_ts", 0)),
 			"expose_end_ts": int(q.get("expose_end_ts", 0)),

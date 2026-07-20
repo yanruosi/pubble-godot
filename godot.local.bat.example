@@ -1,3 +1,4 @@
 @echo off
-rem 复制为 godot.local.bat 并改成你的 Godot.exe 路径
+rem 复制为 godot.local.bat 并改成你的 Godot 4.7.x tools 可执行文件路径
+rem 工程 project.godot features=4.7 — 勿用 4.2/4.3 打开（GDScript 解析差异会假红错）
 set "GODOT_EXE=D:\steamku\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe"

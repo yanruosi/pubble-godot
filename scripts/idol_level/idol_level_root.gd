@@ -548,7 +548,7 @@ func _apply_completion() -> void:
 		_grant_level_rewards()
 		var expose: ExposeManager = get_node_or_null("/root/ExposeManagerSingleton") as ExposeManager
 		if expose != null:
-			expose.add_heat("clear")
+			expose.add_heat("clear", "clear:%s" % level_id)
 		var tutor: TutorialController = get_node_or_null("/root/TutorialControllerSingleton") as TutorialController
 		if tutor != null:
 			tutor.notify_level_cleared()

@@ -96,6 +96,50 @@ func debug_flush_feed_pending() -> void:
 	_ctx.save.save_progress()
 
 
+func get_next_unlock_artist_title() -> String:
+	if _ctx.save == null:
+		return ""
+	var chapter: ChapterManager = _ctx.chapter()
+	if chapter == null:
+		return ""
+	var cc: ConditionChecker = _ctx.condition_checker()
+	var chapter_levels: Array = chapter.get_levels_for_chapter(1)
+	var levels_sorted: Array = chapter_levels.duplicate()
+	levels_sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("order", 0)) < int(b.get("order", 0))
+	)
+	var next_locked_id := ""
+	for level_raw in levels_sorted:
+		if not (level_raw is Dictionary):
+			continue
+		var level: Dictionary = level_raw as Dictionary
+		var lid: String = str(level.get("levelid", ""))
+		if lid.is_empty():
+			continue
+		if _ctx.save.is_level_unlocked(lid) or _ctx.save.is_level_completed(lid):
+			continue
+		var cid: int = int(level.get("unlockconditionid", 0))
+		if cid > 0 and (cc == null or not cc.is_level_condition_met(cid, level, chapter_levels)):
+			continue
+		next_locked_id = lid
+		break
+	if next_locked_id.is_empty():
+		return ""
+	for fp in _feed_posts:
+		if not (fp is Dictionary):
+			continue
+		var post: Dictionary = fp as Dictionary
+		if int(post.get("type", 0)) != 901:
+			continue
+		if str(post.get("level_id", "")) != next_locked_id:
+			continue
+		var name: String = str(post.get("name", ""))
+		if name.length() <= 12:
+			return name
+		return name.substr(0, 12) + "..."
+	return ""
+
+
 func get_post_display_date(_instanceid: String = "") -> String:
 	if _ctx.save == null:
 		return ""

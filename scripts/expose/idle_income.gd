@@ -72,6 +72,8 @@ func tick() -> void:
 			_ctx.save.fans += fans_tick
 			item["idle_fans_earned"] = fans_earned + fans_tick
 			_ctx.check_station_level_up()
+			if _ctx.economy != null and _ctx.economy.has_method("notify_balance_updated"):
+				_ctx.economy.notify_balance_updated(-1)
 		if int(item.get("idle_fp_earned", 0)) >= fp_cap and int(item.get("idle_fans_earned", 0)) >= fans_cap:
 			item["idle_next_ts"] = 0
 		else:

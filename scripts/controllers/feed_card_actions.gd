@@ -59,8 +59,6 @@ func on_mypost_pin_toggled(queue_id: String, is_pinned: bool, expose: ExposeMana
 		return
 	if expose.has_method("toggle_mypost_pin"):
 		expose.toggle_mypost_pin(queue_id, is_pinned)
-	if is_pinned and expose.has_method("add_heat"):
-		expose.add_heat("fav")
 	_ctrl.refresh_feed()
 
 
@@ -78,13 +76,19 @@ func on_publish_requested(tagid: String, mypostid: String) -> void:
 	if not bool(res.get("ok", false)):
 		_ctrl.show_toast(str(res.get("reason", "发帖失败")))
 		return
+	var queue_item: Dictionary = res.get("queue_item", {})
+	var queue_id: String = str(queue_item.get("queue_id", ""))
 	_ctrl._composer.reset_after_publish()
 	if expose.has_method("clear_preview_cursor"):
 		expose.clear_preview_cursor()
 	_ctrl.refresh_compose_area()
 	_ctrl.refresh_banner_area()
+	_ctrl.sync_banner_snapshot()
 	_ctrl.update_currency_hud()
-	_ctrl.refresh_feed(true)
+	_ctrl.show_toast("发布成功")
+	_ctrl.refresh_feed(false)
+	if _ctrl._active_tab == FeedDefs.TAB_ACCOUNT and not queue_id.is_empty():
+		_ctrl._list.play_mypost_slide_in(queue_id)
 	if was_opening and sm != null and bool(sm.opening_done):
 		notify_opening_post_done()
 
